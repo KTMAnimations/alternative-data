@@ -93,6 +93,12 @@ def init_db() -> None:
     from src.models import power_grid  # noqa: F401
     from src.models import patents  # noqa: F401
     from src.models import air_quality  # noqa: F401
+    from src.models import weather  # noqa: F401
+    from src.models import trends  # noqa: F401
+    from src.models import sentiment  # noqa: F401
+    from src.models import shipping  # noqa: F401
+    from src.models import github  # noqa: F401
+    from src.models import satellite  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

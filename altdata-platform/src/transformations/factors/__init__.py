@@ -35,6 +35,53 @@ from src.transformations.factors.air_quality_factors import (
     PollutionTrend,
     RegionalAQI,
 )
+from src.transformations.factors.weather_factors import (
+    HeatingDegreeDays,
+    CoolingDegreeDays,
+    RetailWeatherIndex,
+    AgriculturalStressIndex,
+    WeatherYoYAnomaly,
+    PrecipitationAnomaly,
+)
+from src.transformations.factors.trends_factors import (
+    SearchMomentum,
+    SearchVolatility,
+    SearchYoYChange,
+    CategoryInterest,
+    RetailSentimentIndex,
+)
+from src.transformations.factors.sentiment_factors import (
+    TickerSentiment,
+    MentionVelocity,
+    SentimentMomentum,
+    WSBSentiment,
+    RetailAttentionIndex,
+    SentimentDispersion,
+)
+from src.transformations.factors.shipping_factors import (
+    PortCongestionIndex,
+    PortActivityChange,
+    ContainerVesselCount,
+    TankerActivityIndex,
+    GlobalCongestionIndex,
+    ChinaUSTradeFlow,
+)
+from src.transformations.factors.github_factors import (
+    DeveloperVelocity,
+    CommitMomentum,
+    ReleaseFrequency,
+    StarGrowthRate,
+    ContributorDiversity,
+    TechSectorActivity,
+)
+from src.transformations.factors.satellite_factors import (
+    ParkingOccupancy,
+    ParkingTrend,
+    ConstructionProgress,
+    CropHealthIndex,
+    NDVIAnomaly,
+    RetailTrafficProxy,
+)
 
 __all__ = [
     # SEC factors
@@ -66,4 +113,45 @@ __all__ = [
     "IndustrialActivityProxy",
     "PollutionTrend",
     "RegionalAQI",
+    # Weather factors
+    "HeatingDegreeDays",
+    "CoolingDegreeDays",
+    "RetailWeatherIndex",
+    "AgriculturalStressIndex",
+    "WeatherYoYAnomaly",
+    "PrecipitationAnomaly",
+    # Trends factors
+    "SearchMomentum",
+    "SearchVolatility",
+    "SearchYoYChange",
+    "CategoryInterest",
+    "RetailSentimentIndex",
+    # Sentiment factors
+    "TickerSentiment",
+    "MentionVelocity",
+    "SentimentMomentum",
+    "WSBSentiment",
+    "RetailAttentionIndex",
+    "SentimentDispersion",
+    # Shipping factors
+    "PortCongestionIndex",
+    "PortActivityChange",
+    "ContainerVesselCount",
+    "TankerActivityIndex",
+    "GlobalCongestionIndex",
+    "ChinaUSTradeFlow",
+    # GitHub factors
+    "DeveloperVelocity",
+    "CommitMomentum",
+    "ReleaseFrequency",
+    "StarGrowthRate",
+    "ContributorDiversity",
+    "TechSectorActivity",
+    # Satellite factors
+    "ParkingOccupancy",
+    "ParkingTrend",
+    "ConstructionProgress",
+    "CropHealthIndex",
+    "NDVIAnomaly",
+    "RetailTrafficProxy",
 ]

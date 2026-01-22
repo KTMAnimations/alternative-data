@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     adsb_exchange_rapidapi_key: Optional[str] = Field(default=None)
     openaq_api_key: Optional[str] = Field(default=None)
     uspto_api_key: Optional[str] = Field(default=None)
+    openweathermap_api_key: Optional[str] = Field(default=None)
     
     # Collector settings
     sec_edgar_interval: int = Field(default=300)  # 5 minutes

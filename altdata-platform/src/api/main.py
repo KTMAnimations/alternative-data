@@ -17,6 +17,12 @@ from src.models.adsb import Aircraft, FlightLanding
 from src.models.power_grid import GridLoad, GenerationMix
 from src.models.patents import Patent, PatentAssignee
 from src.models.air_quality import AirQualityMeasurement, AirQualityLocation
+from src.models.weather import WeatherObservation, WeatherForecast, WeatherDaily
+from src.models.trends import TrendInterest, TrendKeyword
+from src.models.sentiment import RedditPost, TickerMention, TickerSentimentDaily
+from src.models.shipping import Port, PortCongestion, Vessel, VesselPosition, GlobalShippingIndex
+from src.models.github import GitHubRepository, GitHubRepoMetrics, GitHubCommit
+from src.models.satellite import SatelliteLocation, ParkingLotMetrics, AgriculturalMetrics, PortActivityMetrics
 from src.transformations.base import FactorRegistry
 
 # Import factors to register them
@@ -50,6 +56,47 @@ from src.transformations.factors import (
     IndustrialActivityProxy,
     PollutionTrend,
     RegionalAQI,
+    # Phase 2 - Weather factors
+    HeatingDegreeDays,
+    CoolingDegreeDays,
+    RetailWeatherIndex,
+    AgriculturalStressIndex,
+    WeatherYoYAnomaly,
+    PrecipitationAnomaly,
+    # Phase 2 - Trends factors
+    SearchMomentum,
+    SearchVolatility,
+    SearchYoYChange,
+    CategoryInterest,
+    RetailSentimentIndex,
+    # Phase 2 - Sentiment factors
+    TickerSentiment,
+    MentionVelocity,
+    SentimentMomentum,
+    WSBSentiment,
+    RetailAttentionIndex,
+    SentimentDispersion,
+    # Phase 2 - Shipping factors
+    PortCongestionIndex,
+    PortActivityChange,
+    ContainerVesselCount,
+    TankerActivityIndex,
+    GlobalCongestionIndex,
+    ChinaUSTradeFlow,
+    # Phase 2 - GitHub factors
+    DeveloperVelocity,
+    CommitMomentum,
+    ReleaseFrequency,
+    StarGrowthRate,
+    ContributorDiversity,
+    TechSectorActivity,
+    # Phase 2 - Satellite factors
+    ParkingOccupancy,
+    ParkingTrend,
+    ConstructionProgress,
+    CropHealthIndex,
+    NDVIAnomaly,
+    RetailTrafficProxy,
 )
 
 # ===========================================
@@ -218,6 +265,169 @@ class AirQualityResponse(BaseModel):
     country: Optional[str]
     date: date
     readings: List[AirQualityRecord]
+    total: int
+
+
+# ===========================================
+# PHASE 2 SCHEMAS
+# ===========================================
+
+class WeatherRecord(BaseModel):
+    city: str
+    timestamp: datetime
+    temp_c: Optional[float]
+    temp_feels_like_c: Optional[float]
+    humidity_pct: Optional[int]
+    wind_speed_ms: Optional[float]
+    weather_main: Optional[str]
+    pressure_hpa: Optional[int]
+
+
+class WeatherResponse(BaseModel):
+    city: str
+    date: date
+    observations: List[WeatherRecord]
+    total: int
+
+
+class WeatherForecastRecord(BaseModel):
+    city: str
+    forecast_timestamp: datetime
+    temp_c: Optional[float]
+    humidity_pct: Optional[int]
+    wind_speed_ms: Optional[float]
+    weather_main: Optional[str]
+    pop: Optional[float]  # Probability of precipitation
+
+
+class WeatherForecastResponse(BaseModel):
+    city: str
+    forecasts: List[WeatherForecastRecord]
+    total: int
+
+
+class TrendRecord(BaseModel):
+    keyword: str
+    date: date
+    interest: Optional[int]
+    is_partial: bool = False
+    geo: Optional[str]
+
+
+class TrendResponse(BaseModel):
+    keyword: str
+    geo: Optional[str]
+    data: List[TrendRecord]
+    total: int
+
+
+class SentimentRecord(BaseModel):
+    ticker: str
+    date: date
+    avg_sentiment: Optional[float]
+    mention_count: Optional[int]
+    positive_mentions: Optional[int]
+    negative_mentions: Optional[int]
+    neutral_mentions: Optional[int]
+
+
+class SentimentResponse(BaseModel):
+    ticker: str
+    data: List[SentimentRecord]
+    total: int
+
+
+class PortRecord(BaseModel):
+    port_id: str
+    port_name: str
+    country: str
+    latitude: Optional[float]
+    longitude: Optional[float]
+    port_type: Optional[str]
+
+
+class PortListResponse(BaseModel):
+    ports: List[PortRecord]
+    total: int
+
+
+class CongestionRecord(BaseModel):
+    port_id: str
+    port_name: Optional[str]
+    date: date
+    congestion_index: Optional[float]
+    vessels_waiting: Optional[int]
+    avg_wait_hours: Optional[float]
+
+
+class CongestionResponse(BaseModel):
+    port_id: Optional[str]
+    date: date
+    data: List[CongestionRecord]
+    total: int
+
+
+class GitHubRepoRecord(BaseModel):
+    full_name: str
+    company: Optional[str]
+    ticker: Optional[str]
+    stars: Optional[int]
+    forks: Optional[int]
+    open_issues: Optional[int]
+    language: Optional[str]
+
+
+class GitHubRepoListResponse(BaseModel):
+    repos: List[GitHubRepoRecord]
+    total: int
+
+
+class GitHubActivityRecord(BaseModel):
+    full_name: str
+    date: date
+    commits_24h: Optional[int]
+    prs_opened_24h: Optional[int]
+    prs_merged_24h: Optional[int]
+    issues_opened_24h: Optional[int]
+    unique_committers_24h: Optional[int]
+
+
+class GitHubActivityResponse(BaseModel):
+    repo: str
+    data: List[GitHubActivityRecord]
+    total: int
+
+
+class ParkingRecord(BaseModel):
+    location_id: str
+    location_name: Optional[str]
+    ticker: Optional[str]
+    date: date
+    occupancy_rate: Optional[float]
+    cars_detected: Optional[int]
+    confidence_score: Optional[float]
+
+
+class ParkingResponse(BaseModel):
+    ticker: Optional[str]
+    data: List[ParkingRecord]
+    total: int
+
+
+class AgriculturalRecord(BaseModel):
+    location_id: str
+    region: str
+    crop_type: Optional[str]
+    date: date
+    ndvi_mean: Optional[float]
+    crop_health_score: Optional[float]
+    ndvi_vs_historical: Optional[float]
+
+
+class AgriculturalResponse(BaseModel):
+    region: str
+    crop_type: Optional[str]
+    data: List[AgriculturalRecord]
     total: int
 
 
@@ -530,6 +740,55 @@ async def list_sources(api_key: str = Depends(verify_api_key)):
                 "update_frequency": "hourly",
                 "factors": ["air_quality_anomaly", "industrial_activity_proxy", "pollution_trend", "regional_aqi"],
             },
+            # Phase 2 Sources
+            {
+                "id": "openweathermap",
+                "name": "OpenWeatherMap",
+                "category": "weather",
+                "status": "active",
+                "update_frequency": "hourly",
+                "factors": ["heating_degree_days", "cooling_degree_days", "retail_weather_index", "agricultural_stress_index", "weather_yoy_anomaly", "precipitation_anomaly"],
+            },
+            {
+                "id": "google_trends",
+                "name": "Google Trends",
+                "category": "consumer_interest",
+                "status": "active",
+                "update_frequency": "daily",
+                "factors": ["search_momentum", "search_volatility", "search_yoy_change", "category_interest", "retail_sentiment_index"],
+            },
+            {
+                "id": "reddit",
+                "name": "Reddit Sentiment",
+                "category": "social_sentiment",
+                "status": "active",
+                "update_frequency": "hourly",
+                "factors": ["ticker_sentiment", "mention_velocity", "sentiment_momentum", "wsb_sentiment", "retail_attention_index", "sentiment_dispersion"],
+            },
+            {
+                "id": "marine_traffic",
+                "name": "MarineTraffic/AIS",
+                "category": "shipping",
+                "status": "active",
+                "update_frequency": "hourly",
+                "factors": ["port_congestion_index", "port_activity_change", "container_vessel_count", "tanker_activity_index", "global_congestion_index", "china_us_trade_flow"],
+            },
+            {
+                "id": "github",
+                "name": "GitHub Activity",
+                "category": "developer_activity",
+                "status": "active",
+                "update_frequency": "daily",
+                "factors": ["developer_velocity", "commit_momentum", "release_frequency", "star_growth_rate", "contributor_diversity", "tech_sector_activity"],
+            },
+            {
+                "id": "sentinel",
+                "name": "Sentinel-2 Satellite",
+                "category": "satellite_imagery",
+                "status": "active",
+                "update_frequency": "weekly",
+                "factors": ["parking_occupancy", "parking_trend", "construction_progress", "crop_health_index", "ndvi_anomaly", "retail_traffic_proxy"],
+            },
         ]
     }
 
@@ -765,6 +1024,469 @@ async def get_air_quality(
             date=query_date,
             readings=readings,
             total=len(readings),
+        )
+    finally:
+        session.close()
+
+
+# ===========================================
+# PHASE 2 ENDPOINTS
+# ===========================================
+
+@app.get("/api/v1/weather/observations", response_model=WeatherResponse, tags=["Weather"])
+async def get_weather_observations(
+    city: str = Query(..., description="City name"),
+    query_date: date = Query(..., alias="date", description="Date to query"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get weather observations for a city."""
+    session = SessionLocal()
+    try:
+        query = (
+            session.query(WeatherObservation)
+            .filter(
+                WeatherObservation.city.ilike(f"%{city}%"),
+                func.date(WeatherObservation.timestamp) == query_date,
+            )
+            .order_by(WeatherObservation.timestamp)
+        )
+
+        results = query.all()
+
+        observations = [
+            WeatherRecord(
+                city=r.city,
+                timestamp=r.timestamp,
+                temp_c=r.temp_c,
+                temp_feels_like_c=r.temp_feels_like_c,
+                humidity_pct=r.humidity_pct,
+                wind_speed_ms=r.wind_speed_ms,
+                weather_main=r.weather_main,
+                pressure_hpa=r.pressure_hpa,
+            )
+            for r in results
+        ]
+
+        return WeatherResponse(
+            city=city,
+            date=query_date,
+            observations=observations,
+            total=len(observations),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/weather/forecast", response_model=WeatherForecastResponse, tags=["Weather"])
+async def get_weather_forecast(
+    city: str = Query(..., description="City name"),
+    days: int = Query(7, ge=1, le=14, description="Number of days"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get weather forecast for a city."""
+    session = SessionLocal()
+    try:
+        start_datetime = datetime.combine(date.today(), datetime.min.time())
+        end_datetime = datetime.combine(date.today() + timedelta(days=days), datetime.max.time())
+
+        query = (
+            session.query(WeatherForecast)
+            .filter(
+                WeatherForecast.city.ilike(f"%{city}%"),
+                WeatherForecast.forecast_timestamp >= start_datetime,
+                WeatherForecast.forecast_timestamp <= end_datetime,
+            )
+            .order_by(WeatherForecast.forecast_timestamp)
+        )
+
+        results = query.all()
+
+        forecasts = [
+            WeatherForecastRecord(
+                city=r.city,
+                forecast_timestamp=r.forecast_timestamp,
+                temp_c=r.temp_c,
+                humidity_pct=r.humidity_pct,
+                wind_speed_ms=r.wind_speed_ms,
+                weather_main=r.weather_main,
+                pop=r.pop,
+            )
+            for r in results
+        ]
+
+        return WeatherForecastResponse(
+            city=city,
+            forecasts=forecasts,
+            total=len(forecasts),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/trends/interest", response_model=TrendResponse, tags=["Trends"])
+async def get_trend_interest(
+    keyword: str = Query(..., description="Search keyword"),
+    geo: Optional[str] = Query("US", description="Geographic region"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get Google Trends interest data for a keyword."""
+    session = SessionLocal()
+    try:
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=90)
+
+        # Query TrendInterest directly by keyword string
+        query = (
+            session.query(TrendInterest)
+            .filter(
+                TrendInterest.keyword.ilike(keyword),
+                TrendInterest.date >= start_date,
+                TrendInterest.date <= end_date,
+            )
+        )
+
+        if geo:
+            query = query.filter(TrendInterest.geo == geo)
+
+        query = query.order_by(TrendInterest.date)
+        results = query.all()
+
+        data = [
+            TrendRecord(
+                keyword=r.keyword,
+                date=r.date,
+                interest=r.interest,
+                is_partial=r.is_partial or False,
+                geo=r.geo,
+            )
+            for r in results
+        ]
+
+        return TrendResponse(
+            keyword=keyword,
+            geo=geo,
+            data=data,
+            total=len(data),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/sentiment/ticker", response_model=SentimentResponse, tags=["Sentiment"])
+async def get_ticker_sentiment(
+    ticker: str = Query(..., description="Stock ticker"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get Reddit sentiment data for a ticker."""
+    session = SessionLocal()
+    try:
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        query = (
+            session.query(TickerSentimentDaily)
+            .filter(
+                TickerSentimentDaily.ticker == ticker.upper(),
+                TickerSentimentDaily.date >= start_date,
+                TickerSentimentDaily.date <= end_date,
+            )
+        )
+
+        query = query.order_by(TickerSentimentDaily.date)
+        results = query.all()
+
+        data = [
+            SentimentRecord(
+                ticker=r.ticker,
+                date=r.date,
+                avg_sentiment=r.avg_sentiment,
+                mention_count=r.mention_count,
+                positive_mentions=r.positive_mentions,
+                negative_mentions=r.negative_mentions,
+                neutral_mentions=r.neutral_mentions,
+            )
+            for r in results
+        ]
+
+        return SentimentResponse(
+            ticker=ticker,
+            data=data,
+            total=len(data),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/shipping/ports", response_model=PortListResponse, tags=["Shipping"])
+async def list_ports(
+    country: Optional[str] = Query(None, description="Filter by country code"),
+    port_type: Optional[str] = Query(None, description="Filter by port type"),
+    api_key: str = Depends(verify_api_key),
+):
+    """List tracked ports."""
+    session = SessionLocal()
+    try:
+        query = session.query(Port)
+
+        if country:
+            query = query.filter(Port.country == country.upper())
+        if port_type:
+            query = query.filter(Port.port_type == port_type)
+
+        results = query.all()
+
+        ports = [
+            PortRecord(
+                port_id=p.port_id,
+                port_name=p.port_name,
+                country=p.country,
+                latitude=p.latitude,
+                longitude=p.longitude,
+                port_type=p.port_type,
+            )
+            for p in results
+        ]
+
+        return PortListResponse(ports=ports, total=len(ports))
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/shipping/congestion", response_model=CongestionResponse, tags=["Shipping"])
+async def get_port_congestion(
+    port_id: Optional[str] = Query(None, description="Port ID"),
+    query_date: date = Query(..., alias="date", description="Date to query"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get port congestion data."""
+    session = SessionLocal()
+    try:
+        query = (
+            session.query(PortCongestion)
+            .filter(PortCongestion.date == query_date)
+        )
+
+        if port_id:
+            query = query.filter(PortCongestion.port_id == port_id)
+
+        results = query.all()
+
+        data = [
+            CongestionRecord(
+                port_id=r.port_id,
+                port_name=r.port.port_name if r.port else None,
+                date=r.date,
+                congestion_index=r.congestion_index,
+                vessels_waiting=r.vessels_waiting,
+                avg_wait_hours=r.avg_wait_hours,
+            )
+            for r in results
+        ]
+
+        return CongestionResponse(
+            port_id=port_id,
+            date=query_date,
+            data=data,
+            total=len(data),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/github/repos", response_model=GitHubRepoListResponse, tags=["GitHub"])
+async def list_github_repos(
+    company: Optional[str] = Query(None, description="Filter by company"),
+    ticker: Optional[str] = Query(None, description="Filter by ticker"),
+    api_key: str = Depends(verify_api_key),
+):
+    """List tracked GitHub repositories."""
+    session = SessionLocal()
+    try:
+        query = session.query(GitHubRepository)
+
+        if company:
+            query = query.filter(GitHubRepository.company.ilike(f"%{company}%"))
+        if ticker:
+            query = query.filter(GitHubRepository.ticker == ticker.upper())
+
+        results = query.all()
+
+        repos = [
+            GitHubRepoRecord(
+                full_name=r.full_name,
+                company=r.company,
+                ticker=r.ticker,
+                stars=None,  # Available in GitHubRepoMetrics
+                forks=None,  # Available in GitHubRepoMetrics
+                open_issues=None,  # Available in GitHubRepoMetrics
+                language=r.language,
+            )
+            for r in results
+        ]
+
+        return GitHubRepoListResponse(repos=repos, total=len(repos))
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/github/activity", response_model=GitHubActivityResponse, tags=["GitHub"])
+async def get_github_activity(
+    repo: str = Query(..., description="Repository full name (owner/repo)"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get GitHub activity metrics for a repository."""
+    session = SessionLocal()
+    try:
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        query = (
+            session.query(GitHubRepoMetrics)
+            .filter(
+                GitHubRepoMetrics.full_name == repo,
+                GitHubRepoMetrics.date >= start_date,
+                GitHubRepoMetrics.date <= end_date,
+            )
+            .order_by(GitHubRepoMetrics.date)
+        )
+
+        results = query.all()
+
+        data = [
+            GitHubActivityRecord(
+                full_name=r.full_name,
+                date=r.date,
+                commits_24h=r.commits_24h,
+                prs_opened_24h=r.prs_opened_24h,
+                prs_merged_24h=r.prs_merged_24h,
+                issues_opened_24h=r.issues_opened_24h,
+                unique_committers_24h=r.unique_committers_24h,
+            )
+            for r in results
+        ]
+
+        return GitHubActivityResponse(
+            repo=repo,
+            data=data,
+            total=len(data),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/satellite/parking", response_model=ParkingResponse, tags=["Satellite"])
+async def get_parking_data(
+    ticker: Optional[str] = Query(None, description="Filter by ticker"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get satellite parking lot occupancy data."""
+    session = SessionLocal()
+    try:
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        query = (
+            session.query(ParkingLotMetrics)
+            .join(SatelliteLocation, ParkingLotMetrics.location_id == SatelliteLocation.location_id)
+            .filter(
+                ParkingLotMetrics.observation_date >= start_date,
+                ParkingLotMetrics.observation_date <= end_date,
+            )
+        )
+
+        if ticker:
+            query = query.filter(ParkingLotMetrics.ticker == ticker.upper())
+
+        query = query.order_by(ParkingLotMetrics.observation_date.desc())
+        results = query.all()
+
+        data = [
+            ParkingRecord(
+                location_id=r.location_id,
+                location_name=r.location.name if r.location else None,
+                ticker=r.ticker,
+                date=r.observation_date,
+                occupancy_rate=r.occupancy_rate,
+                cars_detected=r.cars_detected,
+                confidence_score=r.confidence_score,
+            )
+            for r in results
+        ]
+
+        return ParkingResponse(
+            ticker=ticker,
+            data=data,
+            total=len(data),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/satellite/agriculture", response_model=AgriculturalResponse, tags=["Satellite"])
+async def get_agricultural_data(
+    region: str = Query(..., description="Agricultural region"),
+    crop_type: Optional[str] = Query(None, description="Crop type"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get satellite agricultural/NDVI data."""
+    session = SessionLocal()
+    try:
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=90)
+
+        query = (
+            session.query(AgriculturalMetrics)
+            .filter(
+                AgriculturalMetrics.region.ilike(f"%{region}%"),
+                AgriculturalMetrics.observation_date >= start_date,
+                AgriculturalMetrics.observation_date <= end_date,
+            )
+        )
+
+        if crop_type:
+            query = query.filter(AgriculturalMetrics.crop_type == crop_type)
+
+        query = query.order_by(AgriculturalMetrics.observation_date)
+        results = query.all()
+
+        data = [
+            AgriculturalRecord(
+                location_id=r.location_id,
+                region=r.region,
+                crop_type=r.crop_type,
+                date=r.observation_date,
+                ndvi_mean=r.ndvi_mean,
+                crop_health_score=r.crop_health_score,
+                ndvi_vs_historical=r.ndvi_vs_historical,
+            )
+            for r in results
+        ]
+
+        return AgriculturalResponse(
+            region=region,
+            crop_type=crop_type,
+            data=data,
+            total=len(data),
         )
     finally:
         session.close()
