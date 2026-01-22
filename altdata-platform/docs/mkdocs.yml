@@ -1,0 +1,90 @@
+site_name: Alternative Data Platform
+site_description: Documentation for the Alternative Data Platform API and SDK
+site_author: Alternative Data Platform Team
+site_url: https://ktmanimations.github.io/alternative-data
+
+repo_name: KTMAnimations/alternative-data
+repo_url: https://github.com/KTMAnimations/alternative-data
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../altdata-sdk]
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quickstart: getting-started/quickstart.md
+    - Authentication: getting-started/authentication.md
+    - Rate Limits: getting-started/rate-limits.md
+  - API Reference:
+    - Overview: api-reference/overview.md
+    - Factors: api-reference/factors.md
+    - Entities: api-reference/entities.md
+    - Data Sources: api-reference/sources.md
+  - Factors:
+    - Factor Catalog: factors/index.md
+    - SEC Factors: factors/sec.md
+    - Macro Factors: factors/macro.md
+    - Aviation Factors: factors/aviation.md
+    - Energy Factors: factors/energy.md
+    - Patent Factors: factors/patents.md
+    - Environmental Factors: factors/environmental.md
+    - Weather Factors: factors/weather.md
+    - Trends Factors: factors/trends.md
+    - Sentiment Factors: factors/sentiment.md
+    - Shipping Factors: factors/shipping.md
+    - GitHub Factors: factors/github.md
+    - Satellite Factors: factors/satellite.md
+  - Python SDK:
+    - Installation: sdk/installation.md
+    - Usage: sdk/usage.md
+    - Examples: sdk/examples.md
+  - Data Sources:
+    - Overview: data-sources/overview.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/KTMAnimations/alternative-data

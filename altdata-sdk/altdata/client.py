@@ -3,6 +3,8 @@
 from datetime import datetime, date
 from typing import Optional, Union
 
+import json
+
 import httpx
 
 from .exceptions import (
@@ -38,6 +40,21 @@ from .models import (
     GitHubActivityResponse,
     ParkingResponse,
     AgriculturalResponse,
+    # Alert models
+    AlertRule,
+    AlertRuleCreate,
+    AlertRuleListResponse,
+    AlertNotification,
+    AlertNotificationListResponse,
+    AlertCheckResponse,
+    # Backtest models
+    BacktestRequest,
+    BacktestJobResponse,
+    BacktestResult,
+    BacktestTimeSeries,
+    BacktestPositions,
+    BacktestIC,
+    BacktestJobListResponse,
 )
 
 
@@ -109,8 +126,10 @@ class AltDataClient:
             ServerError: If server returns 5xx error.
             AltDataError: For other HTTP errors.
         """
-        if response.status_code == 200:
+        if response.status_code in (200, 201, 202):
             return response.json()
+        if response.status_code == 204:
+            return {}
 
         # Try to extract error detail from response
         try:
@@ -136,7 +155,7 @@ class AltDataClient:
             raise AltDataError(detail, status_code=response.status_code)
 
     def _request(
-        self, method: str, path: str, params: Optional[dict] = None
+        self, method: str, path: str, params: Optional[dict] = None, json: Optional[dict] = None
     ) -> dict:
         """Make an HTTP request to the API.
 
@@ -144,6 +163,7 @@ class AltDataClient:
             method: HTTP method (GET, POST, etc.).
             path: API endpoint path.
             params: Query parameters.
+            json: JSON body for POST/PUT requests.
 
         Returns:
             The parsed JSON response data.
@@ -159,7 +179,7 @@ class AltDataClient:
 
         try:
             response = self._client.request(
-                method, url, params=params, headers=self._get_headers()
+                method, url, params=params, json=json, headers=self._get_headers()
             )
             return self._handle_response(response)
         except httpx.ConnectError as e:
@@ -676,3 +696,341 @@ class AltDataClient:
         }
         data = self._request("GET", "/api/v1/satellite/agriculture", params=params)
         return AgriculturalResponse(**data)
+
+    # ===========================================
+    # ALERT ENDPOINTS
+    # ===========================================
+
+    def create_alert_rule(
+        self,
+        name: str,
+        factor_name: str,
+        condition: str,
+        threshold: float,
+        entity_id: Optional[str] = None,
+        description: Optional[str] = None,
+        lookback_days: int = 30,
+        notification_channel: str = "slack",
+        notification_config: Optional[dict] = None,
+        cooldown_minutes: int = 60,
+    ) -> AlertRule:
+        """Create a new alert rule.
+
+        Args:
+            name: Rule name.
+            factor_name: Factor to monitor.
+            condition: Alert condition (gt, lt, eq, zscore_gt, zscore_lt, pct_change_gt, pct_change_lt).
+            threshold: Threshold value.
+            entity_id: Entity to monitor (None = all entities).
+            description: Rule description.
+            lookback_days: Days for z-score/pct_change calculation.
+            notification_channel: Channel: slack, email, webhook.
+            notification_config: Channel configuration dict.
+            cooldown_minutes: Minutes between alerts.
+
+        Returns:
+            AlertRule with the created rule.
+        """
+        body = {
+            "name": name,
+            "factor_name": factor_name,
+            "condition": condition,
+            "threshold": threshold,
+            "entity_id": entity_id,
+            "description": description,
+            "lookback_days": lookback_days,
+            "notification_channel": notification_channel,
+            "notification_config": json.dumps(notification_config) if notification_config else None,
+            "cooldown_minutes": cooldown_minutes,
+        }
+        data = self._request("POST", "/api/v1/alerts/rules", json=body)
+        return AlertRule(**data)
+
+    def list_alert_rules(
+        self,
+        is_active: Optional[bool] = None,
+        factor_name: Optional[str] = None,
+    ) -> AlertRuleListResponse:
+        """List all alert rules.
+
+        Args:
+            is_active: Filter by active status.
+            factor_name: Filter by factor name.
+
+        Returns:
+            AlertRuleListResponse with list of rules.
+        """
+        params = {"is_active": is_active, "factor_name": factor_name}
+        data = self._request("GET", "/api/v1/alerts/rules", params=params)
+        return AlertRuleListResponse(**data)
+
+    def get_alert_rule(self, rule_id: int) -> AlertRule:
+        """Get an alert rule by ID.
+
+        Args:
+            rule_id: Rule ID.
+
+        Returns:
+            AlertRule with rule details.
+        """
+        data = self._request("GET", f"/api/v1/alerts/rules/{rule_id}")
+        return AlertRule(**data)
+
+    def update_alert_rule(
+        self,
+        rule_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        threshold: Optional[float] = None,
+        is_active: Optional[bool] = None,
+        **kwargs,
+    ) -> AlertRule:
+        """Update an alert rule.
+
+        Args:
+            rule_id: Rule ID.
+            name: New name.
+            description: New description.
+            threshold: New threshold.
+            is_active: New active status.
+            **kwargs: Additional fields to update.
+
+        Returns:
+            AlertRule with updated rule.
+        """
+        body = {
+            "name": name,
+            "description": description,
+            "threshold": threshold,
+            "is_active": is_active,
+            **kwargs,
+        }
+        # Remove None values
+        body = {k: v for k, v in body.items() if v is not None}
+        data = self._request("PUT", f"/api/v1/alerts/rules/{rule_id}", json=body)
+        return AlertRule(**data)
+
+    def delete_alert_rule(self, rule_id: int) -> None:
+        """Delete an alert rule.
+
+        Args:
+            rule_id: Rule ID.
+        """
+        self._request("DELETE", f"/api/v1/alerts/rules/{rule_id}")
+
+    def list_alert_notifications(
+        self,
+        rule_id: Optional[int] = None,
+        entity_id: Optional[str] = None,
+        status: Optional[str] = None,
+        start_date: Optional[Union[datetime, date, str]] = None,
+        end_date: Optional[Union[datetime, date, str]] = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> AlertNotificationListResponse:
+        """List alert notifications.
+
+        Args:
+            rule_id: Filter by rule ID.
+            entity_id: Filter by entity.
+            status: Filter by status (pending, sent, failed).
+            start_date: Filter by trigger date (from).
+            end_date: Filter by trigger date (to).
+            page: Page number.
+            page_size: Items per page.
+
+        Returns:
+            AlertNotificationListResponse with notifications.
+        """
+        params = {
+            "rule_id": rule_id,
+            "entity_id": entity_id,
+            "status": status,
+            "start_date": self._format_date(start_date),
+            "end_date": self._format_date(end_date),
+            "page": page,
+            "page_size": page_size,
+        }
+        data = self._request("GET", "/api/v1/alerts/notifications", params=params)
+        return AlertNotificationListResponse(**data)
+
+    def trigger_alert_check(self) -> AlertCheckResponse:
+        """Manually trigger a check of all active alert rules.
+
+        Returns:
+            AlertCheckResponse with check results.
+        """
+        data = self._request("POST", "/api/v1/alerts/check")
+        return AlertCheckResponse(**data)
+
+    # ===========================================
+    # BACKTEST ENDPOINTS
+    # ===========================================
+
+    def run_backtest(
+        self,
+        factor_name: str,
+        universe: list,
+        start_date: Union[datetime, date, str],
+        end_date: Union[datetime, date, str],
+        rebalance_freq: str = "daily",
+        long_short: bool = True,
+        top_n: int = 10,
+        transaction_cost: float = 0.001,
+    ) -> str:
+        """Run a backtest asynchronously.
+
+        Args:
+            factor_name: Factor to backtest.
+            universe: List of entity IDs (tickers).
+            start_date: Backtest start date.
+            end_date: Backtest end date.
+            rebalance_freq: Rebalancing frequency (daily, weekly, monthly).
+            long_short: Whether to use long-short strategy.
+            top_n: Number of positions per side.
+            transaction_cost: Transaction cost as fraction.
+
+        Returns:
+            Job ID for retrieving results.
+        """
+        start_str = self._format_date(start_date)
+        end_str = self._format_date(end_date)
+        if isinstance(start_str, str) and "T" in start_str:
+            start_str = start_str.split("T")[0]
+        if isinstance(end_str, str) and "T" in end_str:
+            end_str = end_str.split("T")[0]
+
+        body = {
+            "factor_name": factor_name,
+            "universe": universe,
+            "start_date": start_str,
+            "end_date": end_str,
+            "rebalance_freq": rebalance_freq,
+            "long_short": long_short,
+            "top_n": top_n,
+            "transaction_cost": transaction_cost,
+        }
+        data = self._request("POST", "/api/v1/backtest/run", json=body)
+        return data["job_id"]
+
+    def run_backtest_quick(
+        self,
+        factor_name: str,
+        universe: list,
+        start_date: Union[datetime, date, str],
+        end_date: Union[datetime, date, str],
+        rebalance_freq: str = "daily",
+        long_short: bool = True,
+        top_n: int = 10,
+        transaction_cost: float = 0.001,
+    ) -> BacktestResult:
+        """Run a quick backtest synchronously.
+
+        Limited to 1 year and 50 entities.
+
+        Args:
+            factor_name: Factor to backtest.
+            universe: List of entity IDs (max 50).
+            start_date: Backtest start date.
+            end_date: Backtest end date (max 1 year from start).
+            rebalance_freq: Rebalancing frequency.
+            long_short: Whether to use long-short strategy.
+            top_n: Number of positions per side.
+            transaction_cost: Transaction cost as fraction.
+
+        Returns:
+            BacktestResult with metrics.
+        """
+        start_str = self._format_date(start_date)
+        end_str = self._format_date(end_date)
+        if isinstance(start_str, str) and "T" in start_str:
+            start_str = start_str.split("T")[0]
+        if isinstance(end_str, str) and "T" in end_str:
+            end_str = end_str.split("T")[0]
+
+        body = {
+            "factor_name": factor_name,
+            "universe": universe,
+            "start_date": start_str,
+            "end_date": end_str,
+            "rebalance_freq": rebalance_freq,
+            "long_short": long_short,
+            "top_n": top_n,
+            "transaction_cost": transaction_cost,
+        }
+        data = self._request("POST", "/api/v1/backtest/quick", json=body)
+        return BacktestResult(**data)
+
+    def get_backtest_result(self, job_id: str) -> BacktestResult:
+        """Get backtest results by job ID.
+
+        Args:
+            job_id: Job ID from run_backtest().
+
+        Returns:
+            BacktestResult with metrics.
+        """
+        data = self._request("GET", f"/api/v1/backtest/results/{job_id}")
+        return BacktestResult(**data)
+
+    def get_backtest_timeseries(self, job_id: str) -> BacktestTimeSeries:
+        """Get backtest returns time series.
+
+        Args:
+            job_id: Job ID from run_backtest().
+
+        Returns:
+            BacktestTimeSeries with returns data.
+        """
+        data = self._request("GET", f"/api/v1/backtest/results/{job_id}/timeseries")
+        return BacktestTimeSeries(**data)
+
+    def get_backtest_positions(self, job_id: str) -> BacktestPositions:
+        """Get backtest position history.
+
+        Args:
+            job_id: Job ID from run_backtest().
+
+        Returns:
+            BacktestPositions with position data.
+        """
+        data = self._request("GET", f"/api/v1/backtest/results/{job_id}/positions")
+        return BacktestPositions(**data)
+
+    def get_backtest_ic(self, job_id: str) -> BacktestIC:
+        """Get backtest Information Coefficient series.
+
+        Args:
+            job_id: Job ID from run_backtest().
+
+        Returns:
+            BacktestIC with IC data.
+        """
+        data = self._request("GET", f"/api/v1/backtest/results/{job_id}/ic")
+        return BacktestIC(**data)
+
+    def list_backtest_jobs(
+        self,
+        status: Optional[str] = None,
+        limit: int = 50,
+    ) -> BacktestJobListResponse:
+        """List backtest jobs.
+
+        Args:
+            status: Filter by status (running, complete, failed).
+            limit: Max results.
+
+        Returns:
+            BacktestJobListResponse with job list.
+        """
+        params = {"status": status, "limit": limit}
+        data = self._request("GET", "/api/v1/backtest/jobs", params=params)
+        return BacktestJobListResponse(**data)
+
+    def delete_backtest_job(self, job_id: str) -> None:
+        """Delete a backtest job.
+
+        Args:
+            job_id: Job ID.
+        """
+        self._request("DELETE", f"/api/v1/backtest/jobs/{job_id}")

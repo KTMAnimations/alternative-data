@@ -236,6 +236,116 @@ parking = client.get_parking_data(ticker='WMT')
 agriculture = client.get_agricultural_data('Iowa', crop_type='corn')
 ```
 
+### Alerts
+
+Create and manage alert rules that trigger notifications when factor values meet specified conditions.
+
+```python
+# Create an alert rule
+rule = client.create_alert_rule(
+    name="AAPL Insider Alert",
+    factor_name="insider_transaction_momentum",
+    entity_id="AAPL",
+    condition="gt",  # greater than
+    threshold=1000.0,
+    notification_channel="slack",
+    notification_config={"webhook_url": "https://hooks.slack.com/..."}
+)
+
+# List all alert rules
+rules = client.list_alert_rules(is_active=True)
+df = rules.to_dataframe()
+
+# Get a specific rule
+rule = client.get_alert_rule(rule_id=1)
+
+# Update a rule
+updated = client.update_alert_rule(
+    rule_id=1,
+    threshold=1500.0,
+    is_active=False
+)
+
+# Delete a rule
+client.delete_alert_rule(rule_id=1)
+
+# List triggered notifications
+notifications = client.list_alert_notifications(
+    rule_id=1,
+    status="sent",
+    start_date=date(2024, 1, 1)
+)
+
+# Manually trigger alert check
+result = client.trigger_alert_check()
+print(f"Alerts triggered: {result.alerts_triggered}")
+```
+
+**Condition Types:**
+- `gt` / `lt` / `eq` - Simple threshold comparisons
+- `zscore_gt` / `zscore_lt` - Z-score based anomaly detection
+- `pct_change_gt` / `pct_change_lt` - Percent change alerts
+
+### Backtesting
+
+Run backtests to evaluate factor performance against historical returns.
+
+```python
+from datetime import date
+
+# Run an async backtest (for large universes)
+job_id = client.run_backtest(
+    factor_name="insider_transaction_momentum",
+    universe=["AAPL", "MSFT", "GOOGL", "AMZN", "META"],
+    start_date=date(2023, 1, 1),
+    end_date=date(2023, 12, 31),
+    rebalance_freq="weekly",
+    long_short=True,
+    top_n=10,
+    transaction_cost=0.001
+)
+
+# Get results (poll until complete)
+result = client.get_backtest_result(job_id)
+print(f"Sharpe Ratio: {result.sharpe_ratio:.2f}")
+print(f"Max Drawdown: {result.max_drawdown:.1%}")
+print(f"IC Mean: {result.ic_mean:.3f}")
+
+# Run a quick synchronous backtest (max 1 year, 50 entities)
+result = client.run_backtest_quick(
+    factor_name="patent_momentum",
+    universe=["AAPL", "MSFT", "GOOGL"],
+    start_date=date(2023, 6, 1),
+    end_date=date(2023, 12, 31)
+)
+
+# Get detailed time series data
+timeseries = client.get_backtest_timeseries(job_id)
+df = timeseries.to_dataframe()  # cumulative_returns, daily_returns
+
+# Get position history
+positions = client.get_backtest_positions(job_id)
+df = positions.to_dataframe()  # Position weights per entity
+
+# Get IC (Information Coefficient) series
+ic = client.get_backtest_ic(job_id)
+df = ic.to_dataframe()
+
+# List recent backtest jobs
+jobs = client.list_backtest_jobs(status="complete", limit=10)
+
+# Delete a backtest job
+client.delete_backtest_job(job_id)
+```
+
+**Backtest Metrics:**
+- `sharpe_ratio` - Risk-adjusted return (annualized)
+- `sortino_ratio` - Sharpe using downside deviation only
+- `max_drawdown` - Largest peak-to-trough decline
+- `ic_mean` - Average Information Coefficient
+- `ic_ir` - IC consistency (mean/std)
+- `turnover` - Average daily position change
+
 ## Error Handling
 
 The SDK provides custom exceptions for different error types:

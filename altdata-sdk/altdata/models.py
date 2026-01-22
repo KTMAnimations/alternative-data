@@ -575,3 +575,211 @@ class AgriculturalResponse(BaseModel):
         if not df.empty and "date" in df.columns:
             df = df.set_index("date").sort_index()
         return df
+
+
+# ===========================================
+# ALERT MODELS
+# ===========================================
+
+
+class AlertRule(BaseModel):
+    """An alert rule definition."""
+
+    id: int
+    name: str
+    description: Optional[str] = None
+    factor_name: str
+    entity_id: Optional[str] = None
+    condition: str
+    threshold: float
+    lookback_days: int = 30
+    is_active: bool = True
+    notification_channel: str = "slack"
+    notification_config: Optional[str] = None
+    cooldown_minutes: int = 60
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AlertRuleCreate(BaseModel):
+    """Request model for creating an alert rule."""
+
+    name: str
+    description: Optional[str] = None
+    factor_name: str
+    entity_id: Optional[str] = None
+    condition: str
+    threshold: float
+    lookback_days: int = 30
+    notification_channel: str = "slack"
+    notification_config: Optional[Dict[str, Any]] = None
+    cooldown_minutes: int = 60
+
+
+class AlertRuleListResponse(BaseModel):
+    """Response containing alert rules."""
+
+    rules: List[AlertRule]
+    total: int
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """Convert alert rules to a pandas DataFrame."""
+        if not HAS_PANDAS:
+            raise ImportError("pandas is required for to_dataframe()")
+        data = [r.model_dump() for r in self.rules]
+        return pd.DataFrame(data)
+
+
+class AlertNotification(BaseModel):
+    """An alert notification record."""
+
+    id: int
+    rule_id: int
+    entity_id: Optional[str] = None
+    factor_value: Optional[float] = None
+    threshold: Optional[float] = None
+    computed_value: Optional[float] = None
+    triggered_at: datetime
+    notified_at: Optional[datetime] = None
+    notification_channel: Optional[str] = None
+    notification_status: str
+    error_message: Optional[str] = None
+
+
+class AlertNotificationListResponse(BaseModel):
+    """Response containing alert notifications."""
+
+    notifications: List[AlertNotification]
+    total: int
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """Convert notifications to a pandas DataFrame."""
+        if not HAS_PANDAS:
+            raise ImportError("pandas is required for to_dataframe()")
+        data = [n.model_dump() for n in self.notifications]
+        df = pd.DataFrame(data)
+        if not df.empty and "triggered_at" in df.columns:
+            df = df.set_index("triggered_at").sort_index()
+        return df
+
+
+class AlertCheckResponse(BaseModel):
+    """Response from triggering alert check."""
+
+    status: str
+    alerts_triggered: int
+    details: List[Dict[str, Any]]
+
+
+# ===========================================
+# BACKTEST MODELS
+# ===========================================
+
+
+class BacktestRequest(BaseModel):
+    """Request model for running a backtest."""
+
+    factor_name: str
+    universe: List[str]
+    start_date: date
+    end_date: date
+    rebalance_freq: str = "daily"
+    long_short: bool = True
+    top_n: int = 10
+    transaction_cost: float = 0.001
+
+
+class BacktestJobResponse(BaseModel):
+    """Response from submitting a backtest job."""
+
+    job_id: str
+    status: str
+
+
+class BacktestResult(BaseModel):
+    """Backtest result with all metrics."""
+
+    job_id: str
+    status: str
+    factor_name: Optional[str] = None
+    universe_size: Optional[int] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    rebalance_freq: Optional[str] = None
+    long_short: Optional[bool] = None
+    top_n: Optional[int] = None
+    sharpe_ratio: Optional[float] = None
+    sortino_ratio: Optional[float] = None
+    calmar_ratio: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    total_return: Optional[float] = None
+    annualized_return: Optional[float] = None
+    volatility: Optional[float] = None
+    ic_mean: Optional[float] = None
+    ic_ir: Optional[float] = None
+    win_rate: Optional[float] = None
+    profit_factor: Optional[float] = None
+    turnover: Optional[float] = None
+    completed_at: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BacktestTimeSeries(BaseModel):
+    """Backtest time series data."""
+
+    job_id: str
+    dates: List[str]
+    cumulative_returns: List[float]
+    daily_returns: List[float]
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """Convert time series to a pandas DataFrame."""
+        if not HAS_PANDAS:
+            raise ImportError("pandas is required for to_dataframe()")
+        df = pd.DataFrame({
+            "cumulative_returns": self.cumulative_returns,
+            "daily_returns": self.daily_returns,
+        }, index=pd.to_datetime(self.dates))
+        return df
+
+
+class BacktestPositions(BaseModel):
+    """Backtest position history."""
+
+    job_id: str
+    dates: List[str]
+    positions: Dict[str, List[float]]
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """Convert positions to a pandas DataFrame."""
+        if not HAS_PANDAS:
+            raise ImportError("pandas is required for to_dataframe()")
+        df = pd.DataFrame(self.positions, index=pd.to_datetime(self.dates))
+        return df
+
+
+class BacktestIC(BaseModel):
+    """Backtest IC series."""
+
+    job_id: str
+    dates: List[str]
+    ic_values: List[float]
+    ic_mean: float
+    ic_ir: float
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """Convert IC series to a pandas DataFrame."""
+        if not HAS_PANDAS:
+            raise ImportError("pandas is required for to_dataframe()")
+        df = pd.DataFrame({
+            "ic": self.ic_values,
+        }, index=pd.to_datetime(self.dates))
+        return df
+
+
+class BacktestJobListResponse(BaseModel):
+    """Response containing backtest jobs."""
+
+    jobs: List[Dict[str, Any]]
+    total: int

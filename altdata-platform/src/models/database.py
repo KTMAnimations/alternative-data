@@ -99,6 +99,7 @@ def init_db() -> None:
     from src.models import shipping  # noqa: F401
     from src.models import github  # noqa: F401
     from src.models import satellite  # noqa: F401
+    from src.alerts import models as alert_models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

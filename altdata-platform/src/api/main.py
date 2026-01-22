@@ -25,6 +25,10 @@ from src.models.github import GitHubRepository, GitHubRepoMetrics, GitHubCommit
 from src.models.satellite import SatelliteLocation, ParkingLotMetrics, AgriculturalMetrics, PortActivityMetrics
 from src.transformations.base import FactorRegistry
 
+# Import routers
+from src.alerts.api import router as alerts_router
+from src.backtest.api import router as backtest_router
+
 # Import factors to register them
 from src.transformations.factors import (
     # SEC factors
@@ -119,6 +123,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(alerts_router)
+app.include_router(backtest_router)
 
 # Redis cache
 _redis_client = None

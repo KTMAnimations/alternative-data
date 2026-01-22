@@ -69,20 +69,18 @@ def test_collector_rate_limit():
 
 def test_collector_without_api_key():
     """Test collector handles missing API key."""
-    from src.collectors.fred import FREDCollector, CollectorError
-    import os
+    from src.collectors.fred import FREDCollector
+    from unittest.mock import patch
 
-    # Temporarily clear the API key
-    old_key = os.environ.get("FRED_API_KEY")
-    os.environ["FRED_API_KEY"] = ""
+    # Mock settings to have no API key - this ensures the collector
+    # sees an empty key regardless of environment configuration
+    with patch('src.collectors.fred.settings') as mock_settings:
+        mock_settings.fred_api_key = ""
+        mock_settings.fred_rate_limit = 2.0
 
-    try:
         collector = FREDCollector()
-        # Should not raise during init
+        # Should not raise during init, but api_key should be empty
         assert collector.api_key == "" or collector.api_key is None
-    finally:
-        if old_key:
-            os.environ["FRED_API_KEY"] = old_key
 
 
 def test_parse_multiple_series():

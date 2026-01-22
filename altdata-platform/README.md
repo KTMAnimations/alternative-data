@@ -4,7 +4,7 @@
 [![Tests](https://img.shields.io/badge/tests-200%2B-green.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Status:** Phase 2 Complete | 200+ tests | 80+ factors
+**Status:** Phase 3 Complete | 200+ tests | 80+ factors | Dashboard + SDK + Alerts + Backtesting
 
 A platform that aggregates free alternative data (SEC filings, flight tracking, economic indicators, weather, sentiment, shipping, satellites) and computes quantitative factors for backtesting trading strategies.
 
@@ -189,7 +189,8 @@ curl http://localhost:8000/api/v1/sources/status
 | MVP | SEC EDGAR + FRED collectors, basic API | ✅ Complete |
 | Phase 1 | +ADS-B, Power Grid, USPTO, OpenAQ | ✅ Complete |
 | Phase 2 | +Weather, Trends, Reddit, Shipping, GitHub, Satellite | ✅ Complete |
-| Phase 3 | Dashboard, Python SDK, AWS Deployment | ⏳ Next |
+| Phase 3 | Dashboard, Python SDK, Alerts, Backtesting | ✅ Complete |
+| Phase 4 | AWS Deployment, Production Hardening | ⏳ Next |
 
 ## 🤝 Contributing
 

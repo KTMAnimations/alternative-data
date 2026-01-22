@@ -61,6 +61,18 @@ from .models import (
     ParkingRecord,
     AgriculturalResponse,
     AgriculturalRecord,
+    # Alert models
+    AlertRule,
+    AlertRuleListResponse,
+    AlertNotification,
+    AlertNotificationListResponse,
+    AlertCheckResponse,
+    # Backtest models
+    BacktestResult,
+    BacktestTimeSeries,
+    BacktestPositions,
+    BacktestIC,
+    BacktestJobListResponse,
 )
 
 __version__ = "0.1.0"
@@ -117,4 +129,16 @@ __all__ = [
     "ParkingRecord",
     "AgriculturalResponse",
     "AgriculturalRecord",
+    # Alert models
+    "AlertRule",
+    "AlertRuleListResponse",
+    "AlertNotification",
+    "AlertNotificationListResponse",
+    "AlertCheckResponse",
+    # Backtest models
+    "BacktestResult",
+    "BacktestTimeSeries",
+    "BacktestPositions",
+    "BacktestIC",
+    "BacktestJobListResponse",
 ]

@@ -36,6 +36,18 @@ from altdata import (
     ParkingResponse,
     AgriculturalResponse,
 )
+from altdata.models import (
+    AlertRule,
+    AlertRuleListResponse,
+    AlertNotification,
+    AlertNotificationListResponse,
+    AlertCheckResponse,
+    BacktestResult,
+    BacktestTimeSeries,
+    BacktestPositions,
+    BacktestIC,
+    BacktestJobListResponse,
+)
 
 
 # ===========================================
@@ -1459,3 +1471,514 @@ class TestGetSourceStatus:
         response = client.list_sources()
         assert isinstance(response, SourcesResponse)
         assert len(response.sources) == 1
+
+
+# ===========================================
+# ALERT ENDPOINT TESTS
+# ===========================================
+
+
+class TestAlertEndpoints:
+    """Tests for alert endpoints."""
+
+    @respx.mock
+    def test_create_alert_rule(self, client):
+        """Test create alert rule endpoint."""
+        from altdata.models import AlertRule
+
+        mock_response = {
+            "id": 1,
+            "name": "High Insider Activity",
+            "description": "Alert when insider activity spikes",
+            "factor_name": "insider_transaction_momentum",
+            "entity_id": "AAPL",
+            "condition": "gt",
+            "threshold": 1000.0,
+            "lookback_days": 30,
+            "is_active": True,
+            "notification_channel": "slack",
+            "notification_config": '{"webhook_url": "https://hooks.slack.com/test"}',
+            "cooldown_minutes": 60,
+            "created_by": "test-user",
+            "created_at": "2024-01-15T10:00:00",
+            "updated_at": "2024-01-15T10:00:00",
+        }
+        route = respx.post("http://test-api.local/api/v1/alerts/rules").mock(
+            return_value=httpx.Response(201, json=mock_response)
+        )
+        response = client.create_alert_rule(
+            name="High Insider Activity",
+            factor_name="insider_transaction_momentum",
+            condition="gt",
+            threshold=1000.0,
+            entity_id="AAPL",
+            description="Alert when insider activity spikes",
+            notification_config={"webhook_url": "https://hooks.slack.com/test"},
+        )
+        assert isinstance(response, AlertRule)
+        assert response.id == 1
+        assert response.name == "High Insider Activity"
+        assert response.factor_name == "insider_transaction_momentum"
+        assert route.called
+
+    @respx.mock
+    def test_list_alert_rules(self, client):
+        """Test list alert rules endpoint."""
+        from altdata.models import AlertRuleListResponse
+
+        mock_response = {
+            "rules": [
+                {
+                    "id": 1,
+                    "name": "Test Alert",
+                    "factor_name": "insider_transaction_momentum",
+                    "condition": "gt",
+                    "threshold": 1000.0,
+                    "lookback_days": 30,
+                    "is_active": True,
+                    "notification_channel": "slack",
+                    "cooldown_minutes": 60,
+                    "created_at": "2024-01-15T10:00:00",
+                    "updated_at": "2024-01-15T10:00:00",
+                }
+            ],
+            "total": 1,
+        }
+        route = respx.get("http://test-api.local/api/v1/alerts/rules").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.list_alert_rules(is_active=True)
+        assert isinstance(response, AlertRuleListResponse)
+        assert response.total == 1
+        assert len(response.rules) == 1
+        params = route.calls[0].request.url.params
+        assert params["is_active"].lower() == "true"
+
+    @respx.mock
+    def test_get_alert_rule(self, client):
+        """Test get alert rule endpoint."""
+        from altdata.models import AlertRule
+
+        mock_response = {
+            "id": 1,
+            "name": "Test Alert",
+            "factor_name": "insider_transaction_momentum",
+            "condition": "gt",
+            "threshold": 1000.0,
+            "lookback_days": 30,
+            "is_active": True,
+            "notification_channel": "slack",
+            "cooldown_minutes": 60,
+            "created_at": "2024-01-15T10:00:00",
+            "updated_at": "2024-01-15T10:00:00",
+        }
+        respx.get("http://test-api.local/api/v1/alerts/rules/1").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.get_alert_rule(1)
+        assert isinstance(response, AlertRule)
+        assert response.id == 1
+
+    @respx.mock
+    def test_update_alert_rule(self, client):
+        """Test update alert rule endpoint."""
+        from altdata.models import AlertRule
+
+        mock_response = {
+            "id": 1,
+            "name": "Updated Alert",
+            "factor_name": "insider_transaction_momentum",
+            "condition": "gt",
+            "threshold": 2000.0,
+            "lookback_days": 30,
+            "is_active": False,
+            "notification_channel": "slack",
+            "cooldown_minutes": 60,
+            "created_at": "2024-01-15T10:00:00",
+            "updated_at": "2024-01-15T11:00:00",
+        }
+        route = respx.put("http://test-api.local/api/v1/alerts/rules/1").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.update_alert_rule(
+            rule_id=1,
+            name="Updated Alert",
+            threshold=2000.0,
+            is_active=False,
+        )
+        assert isinstance(response, AlertRule)
+        assert response.name == "Updated Alert"
+        assert response.threshold == 2000.0
+        assert response.is_active is False
+        assert route.called
+
+    @respx.mock
+    def test_delete_alert_rule(self, client):
+        """Test delete alert rule endpoint."""
+        respx.delete("http://test-api.local/api/v1/alerts/rules/1").mock(
+            return_value=httpx.Response(204)
+        )
+        # Should not raise
+        client.delete_alert_rule(1)
+
+    @respx.mock
+    def test_list_alert_notifications(self, client):
+        """Test list alert notifications endpoint."""
+        from altdata.models import AlertNotificationListResponse
+
+        mock_response = {
+            "notifications": [
+                {
+                    "id": 1,
+                    "rule_id": 1,
+                    "entity_id": "AAPL",
+                    "factor_value": 1500.0,
+                    "threshold": 1000.0,
+                    "computed_value": None,
+                    "triggered_at": "2024-01-15T10:00:00",
+                    "notified_at": "2024-01-15T10:00:05",
+                    "notification_channel": "slack",
+                    "notification_status": "sent",
+                    "error_message": None,
+                }
+            ],
+            "total": 1,
+        }
+        route = respx.get("http://test-api.local/api/v1/alerts/notifications").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.list_alert_notifications(
+            rule_id=1,
+            status="sent",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
+        )
+        assert isinstance(response, AlertNotificationListResponse)
+        assert response.total == 1
+        assert len(response.notifications) == 1
+        params = route.calls[0].request.url.params
+        assert params["rule_id"] == "1"
+        assert params["status"] == "sent"
+
+    @respx.mock
+    def test_trigger_alert_check(self, client):
+        """Test trigger alert check endpoint."""
+        from altdata.models import AlertCheckResponse
+
+        mock_response = {
+            "status": "complete",
+            "alerts_triggered": 2,
+            "details": [
+                {"rule_id": 1, "entity_id": "AAPL", "triggered": True},
+                {"rule_id": 2, "entity_id": "MSFT", "triggered": True},
+            ],
+        }
+        respx.post("http://test-api.local/api/v1/alerts/check").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.trigger_alert_check()
+        assert isinstance(response, AlertCheckResponse)
+        assert response.status == "complete"
+        assert response.alerts_triggered == 2
+
+
+# ===========================================
+# BACKTEST ENDPOINT TESTS
+# ===========================================
+
+
+class TestBacktestEndpoints:
+    """Tests for backtest endpoints."""
+
+    @respx.mock
+    def test_run_backtest(self, client):
+        """Test run backtest endpoint."""
+        mock_response = {"job_id": "bt-12345-abc"}
+        route = respx.post("http://test-api.local/api/v1/backtest/run").mock(
+            return_value=httpx.Response(202, json=mock_response)
+        )
+        job_id = client.run_backtest(
+            factor_name="insider_transaction_momentum",
+            universe=["AAPL", "MSFT", "GOOGL"],
+            start_date=date(2023, 1, 1),
+            end_date=date(2023, 12, 31),
+            rebalance_freq="weekly",
+            long_short=True,
+            top_n=10,
+            transaction_cost=0.001,
+        )
+        assert job_id == "bt-12345-abc"
+        assert route.called
+
+    @respx.mock
+    def test_run_backtest_quick(self, client):
+        """Test run quick backtest endpoint."""
+        from altdata.models import BacktestResult
+
+        mock_response = {
+            "job_id": "bt-quick-123",
+            "status": "complete",
+            "factor_name": "insider_transaction_momentum",
+            "universe_size": 3,
+            "start_date": "2023-01-01",
+            "end_date": "2023-12-31",
+            "rebalance_freq": "daily",
+            "long_short": True,
+            "top_n": 10,
+            "sharpe_ratio": 1.5,
+            "sortino_ratio": 2.0,
+            "calmar_ratio": 1.2,
+            "max_drawdown": -0.15,
+            "total_return": 0.25,
+            "annualized_return": 0.28,
+            "volatility": 0.18,
+            "ic_mean": 0.05,
+            "ic_ir": 1.1,
+            "win_rate": 0.55,
+            "profit_factor": 1.8,
+            "turnover": 0.2,
+            "completed_at": "2024-01-15T10:00:00",
+        }
+        respx.post("http://test-api.local/api/v1/backtest/quick").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.run_backtest_quick(
+            factor_name="insider_transaction_momentum",
+            universe=["AAPL", "MSFT", "GOOGL"],
+            start_date=date(2023, 1, 1),
+            end_date=date(2023, 12, 31),
+        )
+        assert isinstance(response, BacktestResult)
+        assert response.job_id == "bt-quick-123"
+        assert response.status == "complete"
+        assert response.sharpe_ratio == 1.5
+
+    @respx.mock
+    def test_get_backtest_result(self, client):
+        """Test get backtest result endpoint."""
+        from altdata.models import BacktestResult
+
+        mock_response = {
+            "job_id": "bt-12345-abc",
+            "status": "complete",
+            "factor_name": "insider_transaction_momentum",
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -0.15,
+            "total_return": 0.25,
+        }
+        respx.get("http://test-api.local/api/v1/backtest/results/bt-12345-abc").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.get_backtest_result("bt-12345-abc")
+        assert isinstance(response, BacktestResult)
+        assert response.job_id == "bt-12345-abc"
+        assert response.status == "complete"
+
+    @respx.mock
+    def test_get_backtest_timeseries(self, client):
+        """Test get backtest timeseries endpoint."""
+        from altdata.models import BacktestTimeSeries
+
+        mock_response = {
+            "job_id": "bt-12345-abc",
+            "dates": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "cumulative_returns": [1.0, 1.01, 1.02],
+            "daily_returns": [0.0, 0.01, 0.0099],
+        }
+        respx.get("http://test-api.local/api/v1/backtest/results/bt-12345-abc/timeseries").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.get_backtest_timeseries("bt-12345-abc")
+        assert isinstance(response, BacktestTimeSeries)
+        assert response.job_id == "bt-12345-abc"
+        assert len(response.dates) == 3
+
+    @respx.mock
+    def test_get_backtest_positions(self, client):
+        """Test get backtest positions endpoint."""
+        from altdata.models import BacktestPositions
+
+        mock_response = {
+            "job_id": "bt-12345-abc",
+            "dates": ["2023-01-01", "2023-01-02"],
+            "positions": {
+                "AAPL": [0.5, 0.5],
+                "MSFT": [0.5, 0.5],
+            },
+        }
+        respx.get("http://test-api.local/api/v1/backtest/results/bt-12345-abc/positions").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.get_backtest_positions("bt-12345-abc")
+        assert isinstance(response, BacktestPositions)
+        assert response.job_id == "bt-12345-abc"
+        assert "AAPL" in response.positions
+
+    @respx.mock
+    def test_get_backtest_ic(self, client):
+        """Test get backtest IC endpoint."""
+        from altdata.models import BacktestIC
+
+        mock_response = {
+            "job_id": "bt-12345-abc",
+            "dates": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "ic_values": [0.05, 0.06, 0.04],
+            "ic_mean": 0.05,
+            "ic_ir": 1.1,
+        }
+        respx.get("http://test-api.local/api/v1/backtest/results/bt-12345-abc/ic").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.get_backtest_ic("bt-12345-abc")
+        assert isinstance(response, BacktestIC)
+        assert response.job_id == "bt-12345-abc"
+        assert response.ic_mean == 0.05
+        assert response.ic_ir == 1.1
+
+    @respx.mock
+    def test_list_backtest_jobs(self, client):
+        """Test list backtest jobs endpoint."""
+        from altdata.models import BacktestJobListResponse
+
+        mock_response = {
+            "jobs": [
+                {"job_id": "bt-1", "status": "complete", "factor_name": "test_factor"},
+                {"job_id": "bt-2", "status": "running", "factor_name": "other_factor"},
+            ],
+            "total": 2,
+        }
+        route = respx.get("http://test-api.local/api/v1/backtest/jobs").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+        response = client.list_backtest_jobs(status="complete", limit=10)
+        assert isinstance(response, BacktestJobListResponse)
+        assert response.total == 2
+        params = route.calls[0].request.url.params
+        assert params["status"] == "complete"
+        assert params["limit"] == "10"
+
+    @respx.mock
+    def test_delete_backtest_job(self, client):
+        """Test delete backtest job endpoint."""
+        respx.delete("http://test-api.local/api/v1/backtest/jobs/bt-12345-abc").mock(
+            return_value=httpx.Response(204)
+        )
+        # Should not raise
+        client.delete_backtest_job("bt-12345-abc")
+
+
+# ===========================================
+# ALERT/BACKTEST MODEL TO_DATAFRAME TESTS
+# ===========================================
+
+
+class TestAlertBacktestModelsToDataframe:
+    """Tests for alert and backtest model to_dataframe methods."""
+
+    def test_alert_rule_list_to_dataframe(self):
+        """Test AlertRuleListResponse to_dataframe."""
+        from altdata.models import AlertRuleListResponse, AlertRule
+        from datetime import datetime
+
+        response = AlertRuleListResponse(
+            rules=[
+                AlertRule(
+                    id=1,
+                    name="Test Alert",
+                    factor_name="insider_transaction_momentum",
+                    condition="gt",
+                    threshold=1000.0,
+                    lookback_days=30,
+                    is_active=True,
+                    notification_channel="slack",
+                    cooldown_minutes=60,
+                    created_at=datetime(2024, 1, 15, 10, 0),
+                    updated_at=datetime(2024, 1, 15, 10, 0),
+                )
+            ],
+            total=1,
+        )
+        df = response.to_dataframe()
+        assert len(df) == 1
+        assert "name" in df.columns
+        assert "factor_name" in df.columns
+
+    def test_alert_notification_list_to_dataframe(self):
+        """Test AlertNotificationListResponse to_dataframe."""
+        from altdata.models import AlertNotificationListResponse, AlertNotification
+        from datetime import datetime
+
+        response = AlertNotificationListResponse(
+            notifications=[
+                AlertNotification(
+                    id=1,
+                    rule_id=1,
+                    entity_id="AAPL",
+                    factor_value=1500.0,
+                    threshold=1000.0,
+                    triggered_at=datetime(2024, 1, 15, 10, 0),
+                    notification_status="sent",
+                )
+            ],
+            total=1,
+        )
+        df = response.to_dataframe()
+        assert len(df) == 1
+        assert df.index.name == "triggered_at"
+
+    def test_backtest_timeseries_to_dataframe(self):
+        """Test BacktestTimeSeries to_dataframe."""
+        from altdata.models import BacktestTimeSeries
+
+        response = BacktestTimeSeries(
+            job_id="bt-123",
+            dates=["2023-01-01", "2023-01-02", "2023-01-03"],
+            cumulative_returns=[1.0, 1.01, 1.02],
+            daily_returns=[0.0, 0.01, 0.0099],
+        )
+        df = response.to_dataframe()
+        assert len(df) == 3
+        assert "cumulative_returns" in df.columns
+        assert "daily_returns" in df.columns
+
+    def test_backtest_positions_to_dataframe(self):
+        """Test BacktestPositions to_dataframe."""
+        from altdata.models import BacktestPositions
+
+        response = BacktestPositions(
+            job_id="bt-123",
+            dates=["2023-01-01", "2023-01-02"],
+            positions={
+                "AAPL": [0.5, 0.5],
+                "MSFT": [0.5, 0.5],
+            },
+        )
+        df = response.to_dataframe()
+        assert len(df) == 2
+        assert "AAPL" in df.columns
+        assert "MSFT" in df.columns
+
+    def test_backtest_ic_to_dataframe(self):
+        """Test BacktestIC to_dataframe."""
+        from altdata.models import BacktestIC
+
+        response = BacktestIC(
+            job_id="bt-123",
+            dates=["2023-01-01", "2023-01-02", "2023-01-03"],
+            ic_values=[0.05, 0.06, 0.04],
+            ic_mean=0.05,
+            ic_ir=1.1,
+        )
+        df = response.to_dataframe()
+        assert len(df) == 3
+        assert "ic" in df.columns
+
+    def test_empty_alert_backtest_dataframes(self):
+        """Test to_dataframe with empty data lists for alert/backtest models."""
+        from altdata.models import (
+            AlertRuleListResponse,
+            AlertNotificationListResponse,
+        )
+
+        assert len(AlertRuleListResponse(rules=[], total=0).to_dataframe()) == 0
+        assert len(AlertNotificationListResponse(notifications=[], total=0).to_dataframe()) == 0
