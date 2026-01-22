@@ -87,6 +87,41 @@ def run_collector(source: str, **context):
         collector = OpenAQCollector(
             api_key=Variable.get("OPENAQ_API_KEY")
         )
+    elif source == "weather":
+        from src.collectors.weather import WeatherCollector
+        collector = WeatherCollector(
+            api_key=Variable.get("OPENWEATHERMAP_API_KEY")
+        )
+    elif source == "trends":
+        from src.collectors.google_trends import GoogleTrendsCollector
+        collector = GoogleTrendsCollector()
+    elif source == "reddit":
+        from src.collectors.reddit_sentiment import RedditSentimentCollector
+        collector = RedditSentimentCollector(
+            client_id=Variable.get("REDDIT_CLIENT_ID"),
+            client_secret=Variable.get("REDDIT_CLIENT_SECRET")
+        )
+    elif source == "shipping":
+        from src.collectors.marine_traffic import MarineTrafficCollector
+        collector = MarineTrafficCollector(
+            api_key=Variable.get("MARINETRAFFIC_API_KEY")
+        )
+    elif source == "github":
+        from src.collectors.github_activity import GitHubActivityCollector
+        collector = GitHubActivityCollector(
+            token=Variable.get("GITHUB_TOKEN")
+        )
+    elif source == "satellite":
+        from src.collectors.sentinel import SentinelCollector
+        collector = SentinelCollector(
+            client_id=Variable.get("SENTINEL_HUB_CLIENT_ID"),
+            client_secret=Variable.get("SENTINEL_HUB_CLIENT_SECRET")
+        )
+    elif source == "patents":
+        from src.collectors.uspto import USPTOCollector
+        collector = USPTOCollector(
+            api_key=Variable.get("USPTO_API_KEY", "")
+        )
     else:
         raise ValueError(f"Unknown source: {source}")
     
@@ -509,3 +544,187 @@ with dag_backfill:
                 --end {{ params.end_date }}
         """,
     )
+
+
+# ===========================================
+# DAG 9: WEATHER DATA (Hourly)
+# ===========================================
+
+dag_weather = DAG(
+    "altdata_weather",
+    default_args=default_args,
+    description="Collect OpenWeatherMap weather data",
+    schedule_interval="0 * * * *",  # Every hour
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["altdata", "collection", "weather"],
+)
+
+with dag_weather:
+    collect_weather = PythonOperator(
+        task_id="collect_weather",
+        python_callable=run_collector,
+        op_kwargs={"source": "weather"},
+    )
+
+    compute_weather_factors = PythonOperator(
+        task_id="compute_weather_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "weather"},
+    )
+
+    collect_weather >> compute_weather_factors
+
+
+# ===========================================
+# DAG 10: GOOGLE TRENDS (Daily)
+# ===========================================
+
+dag_trends = DAG(
+    "altdata_trends",
+    default_args=default_args,
+    description="Collect Google Trends search data",
+    schedule_interval="0 6 * * *",  # Daily at 6 AM
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    max_active_runs=1,  # Rate limiting is aggressive
+    tags=["altdata", "collection", "trends"],
+)
+
+with dag_trends:
+    collect_trends = PythonOperator(
+        task_id="collect_trends",
+        python_callable=run_collector,
+        op_kwargs={"source": "trends"},
+    )
+
+    compute_trends_factors = PythonOperator(
+        task_id="compute_trends_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "trends"},
+    )
+
+    collect_trends >> compute_trends_factors
+
+
+# ===========================================
+# DAG 11: REDDIT SENTIMENT (Hourly)
+# ===========================================
+
+dag_reddit = DAG(
+    "altdata_reddit",
+    default_args=default_args,
+    description="Collect Reddit sentiment data with FinBERT",
+    schedule_interval="0 * * * *",  # Every hour
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["altdata", "collection", "sentiment"],
+)
+
+with dag_reddit:
+    collect_reddit = PythonOperator(
+        task_id="collect_reddit",
+        python_callable=run_collector,
+        op_kwargs={"source": "reddit"},
+    )
+
+    compute_sentiment_factors = PythonOperator(
+        task_id="compute_sentiment_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "sentiment"},
+    )
+
+    collect_reddit >> compute_sentiment_factors
+
+
+# ===========================================
+# DAG 12: SHIPPING DATA (Hourly)
+# ===========================================
+
+dag_shipping = DAG(
+    "altdata_shipping",
+    default_args=default_args,
+    description="Collect MarineTraffic/AIS shipping data",
+    schedule_interval="0 * * * *",  # Every hour
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["altdata", "collection", "shipping"],
+)
+
+with dag_shipping:
+    collect_shipping = PythonOperator(
+        task_id="collect_shipping",
+        python_callable=run_collector,
+        op_kwargs={"source": "shipping"},
+    )
+
+    compute_shipping_factors = PythonOperator(
+        task_id="compute_shipping_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "shipping"},
+    )
+
+    collect_shipping >> compute_shipping_factors
+
+
+# ===========================================
+# DAG 13: GITHUB ACTIVITY (Daily)
+# ===========================================
+
+dag_github = DAG(
+    "altdata_github",
+    default_args=default_args,
+    description="Collect GitHub developer activity data",
+    schedule_interval="0 6 * * *",  # Daily at 6 AM
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["altdata", "collection", "github"],
+)
+
+with dag_github:
+    collect_github = PythonOperator(
+        task_id="collect_github",
+        python_callable=run_collector,
+        op_kwargs={"source": "github"},
+    )
+
+    compute_github_factors = PythonOperator(
+        task_id="compute_github_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "github"},
+    )
+
+    collect_github >> compute_github_factors
+
+
+# ===========================================
+# DAG 14: SATELLITE IMAGERY (Weekly)
+# ===========================================
+
+dag_satellite = DAG(
+    "altdata_satellite",
+    default_args={
+        **default_args,
+        "execution_timeout": timedelta(hours=4),  # Satellite processing takes longer
+    },
+    description="Collect Sentinel-2 satellite imagery analysis",
+    schedule_interval="0 6 * * MON",  # Weekly on Monday at 6 AM
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    tags=["altdata", "collection", "satellite"],
+)
+
+with dag_satellite:
+    collect_satellite = PythonOperator(
+        task_id="collect_satellite",
+        python_callable=run_collector,
+        op_kwargs={"source": "satellite"},
+    )
+
+    compute_satellite_factors = PythonOperator(
+        task_id="compute_satellite_factors",
+        python_callable=compute_factors,
+        op_kwargs={"factor_category": "satellite"},
+    )
+
+    collect_satellite >> compute_satellite_factors

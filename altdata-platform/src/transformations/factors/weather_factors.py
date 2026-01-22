@@ -493,3 +493,112 @@ class PrecipitationAnomaly(BaseFactor):
         """Compute precipitation anomaly."""
         target_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
         return calc_precipitation_anomaly(entity_id, target_date, lookback_days)
+
+
+def calc_severe_weather_exposure(
+    entity_id: str,
+    as_of_date: datetime,
+    lookback_hours: int = 72,
+) -> Optional[float]:
+    """Calculate severe weather exposure for a company.
+
+    Counts weather alerts affecting company locations.
+    Higher values indicate greater operational risk.
+
+    Args:
+        entity_id: Company entity ID
+        as_of_date: Reference timestamp
+        lookback_hours: Hours to look back for alerts
+
+    Returns:
+        Severity-weighted alert count
+    """
+    session = SessionLocal()
+    try:
+        from src.models.schemas import Entity
+
+        # Get company entity to find associated locations
+        entity = session.query(Entity).filter_by(id=entity_id).first()
+        if not entity:
+            return None
+
+        # Get company locations from metadata
+        locations = []
+        if entity.extra_data and 'locations' in entity.extra_data:
+            locations = entity.extra_data['locations']
+        elif entity.extra_data and 'headquarters' in entity.extra_data:
+            locations = [entity.extra_data['headquarters']]
+
+        if not locations:
+            # Default to major US cities if no specific locations
+            locations = ["new_york_us", "los_angeles_us", "chicago_us"]
+
+        start_time = as_of_date - timedelta(hours=lookback_hours)
+
+        # Severity weights
+        SEVERITY_WEIGHTS = {
+            "extreme": 4.0,
+            "severe": 3.0,
+            "moderate": 2.0,
+            "minor": 1.0,
+            "watch": 0.5,
+            "advisory": 0.25,
+        }
+
+        total_exposure = 0.0
+
+        for location in locations:
+            # Query weather alerts for this location
+            alerts = (
+                session.query(WeatherAlert)
+                .filter(
+                    WeatherAlert.location_id == location,
+                    WeatherAlert.start_time <= as_of_date,
+                    WeatherAlert.end_time >= start_time,
+                )
+                .all()
+            )
+
+            for alert in alerts:
+                severity = (alert.severity or "minor").lower()
+                weight = SEVERITY_WEIGHTS.get(severity, 1.0)
+                total_exposure += weight
+
+        return total_exposure
+
+    finally:
+        session.close()
+
+
+@FactorRegistry.register
+class SevereWeatherExposure(BaseFactor):
+    """Severe Weather Exposure Factor.
+
+    Measures company exposure to severe weather events.
+    Higher values indicate greater operational risk.
+    """
+
+    FACTOR_NAME = "severe_weather_exposure"
+    FACTOR_DESCRIPTION = "Severity-weighted weather alert exposure"
+    CATEGORY = "weather"
+    ENTITY_TYPE = "company"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 3
+
+    def compute(
+        self,
+        entity_id: str,  # Company entity ID
+        as_of_date: datetime,
+        lookback_hours: int = 72,
+    ) -> Optional[float]:
+        """Compute severe weather exposure.
+
+        Args:
+            entity_id: Company entity ID
+            as_of_date: Date for computation
+            lookback_hours: Hours to look back
+
+        Returns:
+            Severity-weighted exposure score
+        """
+        return calc_severe_weather_exposure(entity_id, as_of_date, lookback_hours)

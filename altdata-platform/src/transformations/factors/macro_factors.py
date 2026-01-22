@@ -273,3 +273,219 @@ class FinancialConditionsIndex(BaseFactor):
 
         finally:
             self._close_session()
+
+
+@FactorRegistry.register
+class YieldCurveInversion(BaseFactor):
+    """Yield Curve Inversion Factor.
+
+    Binary indicator of whether the yield curve is inverted.
+    Inversion (10Y < 2Y) is a classic recession signal.
+    """
+
+    FACTOR_NAME = "yield_curve_inversion"
+    FACTOR_DESCRIPTION = "Binary: 1 if yield curve inverted, 0 otherwise"
+    CATEGORY = "macro"
+    ENTITY_TYPE = "market"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 1
+
+    def compute(
+        self,
+        entity_id: str = "MARKET",
+        as_of_date: Optional[datetime] = None,
+        **kwargs
+    ) -> Optional[float]:
+        """Compute yield curve inversion indicator.
+
+        Args:
+            entity_id: Not used (market-wide factor)
+            as_of_date: Date for computation
+
+        Returns:
+            1.0 if inverted, 0.0 if normal, None if data missing
+        """
+        if as_of_date is None:
+            as_of_date = datetime.utcnow()
+
+        session = self._get_session()
+        try:
+            # Get most recent GS10 value on or before as_of_date
+            gs10 = (
+                session.query(FREDSeries)
+                .filter(
+                    FREDSeries.series_id == "GS10",
+                    FREDSeries.observation_date <= as_of_date,
+                )
+                .order_by(FREDSeries.observation_date.desc())
+                .first()
+            )
+
+            # Get most recent GS2 value
+            gs2 = (
+                session.query(FREDSeries)
+                .filter(
+                    FREDSeries.series_id == "GS2",
+                    FREDSeries.observation_date <= as_of_date,
+                )
+                .order_by(FREDSeries.observation_date.desc())
+                .first()
+            )
+
+            if not gs10 or not gs2:
+                logger.warning("Missing yield data for inversion calculation")
+                return None
+
+            # Return 1 if inverted (10Y < 2Y), 0 otherwise
+            return 1.0 if gs10.value < gs2.value else 0.0
+
+        finally:
+            self._close_session()
+
+
+@FactorRegistry.register
+class MoneySupplyGrowth(BaseFactor):
+    """Money Supply Growth Factor.
+
+    M2 money supply year-over-year percentage change.
+    Higher growth may indicate inflationary pressures.
+    """
+
+    FACTOR_NAME = "money_supply_growth"
+    FACTOR_DESCRIPTION = "M2 money supply year-over-year percentage change"
+    CATEGORY = "macro"
+    ENTITY_TYPE = "market"
+    FREQUENCY = "weekly"
+    LOOKBACK_DAYS = 7
+
+    def compute(
+        self,
+        entity_id: str = "MARKET",
+        as_of_date: Optional[datetime] = None,
+        **kwargs
+    ) -> Optional[float]:
+        """Compute M2 money supply YoY growth.
+
+        Args:
+            entity_id: Not used (market-wide factor)
+            as_of_date: Date for computation
+
+        Returns:
+            YoY percentage change in M2
+        """
+        if as_of_date is None:
+            as_of_date = datetime.utcnow()
+
+        session = self._get_session()
+        try:
+            # Get most recent M2SL value
+            current_m2 = (
+                session.query(FREDSeries)
+                .filter(
+                    FREDSeries.series_id == "M2SL",
+                    FREDSeries.observation_date <= as_of_date,
+                )
+                .order_by(FREDSeries.observation_date.desc())
+                .first()
+            )
+
+            if not current_m2:
+                logger.warning("Missing current M2SL data")
+                return None
+
+            # Get M2SL from one year ago
+            yoy_date = as_of_date - timedelta(days=365)
+            prior_m2 = (
+                session.query(FREDSeries)
+                .filter(
+                    FREDSeries.series_id == "M2SL",
+                    FREDSeries.observation_date <= yoy_date,
+                )
+                .order_by(FREDSeries.observation_date.desc())
+                .first()
+            )
+
+            if not prior_m2 or prior_m2.value == 0:
+                logger.warning("Missing prior M2SL data for YoY calculation")
+                return None
+
+            # Calculate YoY change
+            return ((current_m2.value - prior_m2.value) / prior_m2.value) * 100
+
+        finally:
+            self._close_session()
+
+
+@FactorRegistry.register
+class JoblessClaimsMomentum(BaseFactor):
+    """Jobless Claims Momentum Factor.
+
+    Compares 4-week average to 12-week average of initial jobless claims.
+    Positive momentum indicates worsening labor market.
+    """
+
+    FACTOR_NAME = "jobless_claims_momentum"
+    FACTOR_DESCRIPTION = "4-week vs 12-week average initial jobless claims ratio"
+    CATEGORY = "macro"
+    ENTITY_TYPE = "market"
+    FREQUENCY = "weekly"
+    LOOKBACK_DAYS = 84  # 12 weeks
+
+    def compute(
+        self,
+        entity_id: str = "MARKET",
+        as_of_date: Optional[datetime] = None,
+        **kwargs
+    ) -> Optional[float]:
+        """Compute jobless claims momentum.
+
+        Args:
+            entity_id: Not used (market-wide factor)
+            as_of_date: Date for computation
+
+        Returns:
+            Momentum ratio (4-week avg / 12-week avg - 1) * 100
+        """
+        if as_of_date is None:
+            as_of_date = datetime.utcnow()
+
+        session = self._get_session()
+        try:
+            # Get claims data for last 12 weeks
+            start_12wk = as_of_date - timedelta(weeks=12)
+            start_4wk = as_of_date - timedelta(weeks=4)
+
+            # Get all ICSA (Initial Claims) data points
+            claims = (
+                session.query(FREDSeries)
+                .filter(
+                    FREDSeries.series_id == "ICSA",
+                    FREDSeries.observation_date >= start_12wk,
+                    FREDSeries.observation_date <= as_of_date,
+                )
+                .order_by(FREDSeries.observation_date.desc())
+                .all()
+            )
+
+            if len(claims) < 4:
+                logger.warning("Insufficient ICSA data for momentum calculation")
+                return None
+
+            # Separate into 4-week and 12-week periods
+            recent_4wk = [c.value for c in claims if c.observation_date >= start_4wk]
+            all_12wk = [c.value for c in claims]
+
+            if not recent_4wk or not all_12wk:
+                return None
+
+            avg_4wk = sum(recent_4wk) / len(recent_4wk)
+            avg_12wk = sum(all_12wk) / len(all_12wk)
+
+            if avg_12wk == 0:
+                return None
+
+            # Return momentum as percentage deviation from longer-term average
+            return ((avg_4wk / avg_12wk) - 1) * 100
+
+        finally:
+            self._close_session()

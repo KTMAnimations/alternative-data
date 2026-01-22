@@ -405,3 +405,393 @@ class YoYDemandChange(BaseFactor):
             YoY change percentage
         """
         return calc_yoy_demand_change(entity_id, as_of_date, comparison_days)
+
+
+def calc_industrial_load_index(
+    iso_region: str,
+    timestamp: datetime,
+    overnight_start_hour: int = 0,
+    overnight_end_hour: int = 5,
+) -> Optional[float]:
+    """Calculate overnight base load as industrial activity proxy.
+
+    Overnight load (12 AM - 5 AM) primarily reflects industrial activity
+    since residential and commercial loads are minimal.
+
+    Args:
+        iso_region: ISO region code
+        timestamp: Reference timestamp
+        overnight_start_hour: Start of overnight period
+        overnight_end_hour: End of overnight period
+
+    Returns:
+        Average overnight load in MW
+    """
+    session = SessionLocal()
+    try:
+        # Get loads for the overnight period of the current and previous day
+        date_start = timestamp.replace(hour=0, minute=0, second=0)
+        date_end = timestamp
+
+        loads = (
+            session.query(GridLoad)
+            .filter(
+                GridLoad.iso_region == iso_region,
+                GridLoad.timestamp >= date_start,
+                GridLoad.timestamp <= date_end,
+                GridLoad.load_mw.isnot(None),
+            )
+            .all()
+        )
+
+        # Filter to overnight hours
+        overnight_loads = [
+            load.load_mw for load in loads
+            if overnight_start_hour <= load.timestamp.hour < overnight_end_hour
+        ]
+
+        if not overnight_loads:
+            return None
+
+        return sum(overnight_loads) / len(overnight_loads)
+    finally:
+        session.close()
+
+
+def calc_weather_adjusted_demand(
+    iso_region: str,
+    timestamp: datetime,
+    lookback_hours: int = 24,
+) -> Optional[float]:
+    """Calculate weather-adjusted demand (actual minus forecast).
+
+    Positive values indicate higher than expected demand,
+    possibly due to industrial or economic activity.
+
+    Args:
+        iso_region: ISO region code
+        timestamp: Reference timestamp
+        lookback_hours: Hours of data to analyze
+
+    Returns:
+        Average demand surprise in MW
+    """
+    session = SessionLocal()
+    try:
+        start = timestamp - timedelta(hours=lookback_hours)
+
+        loads = (
+            session.query(GridLoad)
+            .filter(
+                GridLoad.iso_region == iso_region,
+                GridLoad.timestamp >= start,
+                GridLoad.timestamp <= timestamp,
+                GridLoad.load_mw.isnot(None),
+                GridLoad.forecast_mw.isnot(None),
+            )
+            .all()
+        )
+
+        if not loads:
+            return None
+
+        # Calculate average difference (actual - forecast)
+        differences = [load.load_mw - load.forecast_mw for load in loads]
+        return sum(differences) / len(differences)
+    finally:
+        session.close()
+
+
+def calc_peak_demand_ratio(
+    iso_region: str,
+    timestamp: datetime,
+    historical_days: int = 365,
+) -> Optional[float]:
+    """Calculate current demand vs historical peak.
+
+    Higher ratios indicate demand approaching historical highs,
+    potentially signaling strong economic activity or grid stress.
+
+    Args:
+        iso_region: ISO region code
+        timestamp: Reference timestamp
+        historical_days: Days of history to find peak
+
+    Returns:
+        Current load / Historical peak as percentage
+    """
+    session = SessionLocal()
+    try:
+        # Get current load
+        current_load = (
+            session.query(GridLoad)
+            .filter(
+                GridLoad.iso_region == iso_region,
+                GridLoad.timestamp <= timestamp,
+                GridLoad.load_mw.isnot(None),
+            )
+            .order_by(GridLoad.timestamp.desc())
+            .first()
+        )
+
+        if not current_load:
+            return None
+
+        # Get historical peak
+        historical_start = timestamp - timedelta(days=historical_days)
+        historical_peak = (
+            session.query(func.max(GridLoad.load_mw))
+            .filter(
+                GridLoad.iso_region == iso_region,
+                GridLoad.timestamp >= historical_start,
+                GridLoad.timestamp <= timestamp,
+            )
+            .scalar()
+        )
+
+        if not historical_peak or historical_peak == 0:
+            return None
+
+        return (current_load.load_mw / historical_peak) * 100
+    finally:
+        session.close()
+
+
+def calc_grid_stress_indicator(
+    iso_region: str,
+    timestamp: datetime,
+) -> Optional[float]:
+    """Calculate grid stress indicator (load vs capacity margin).
+
+    Values approaching 100 indicate potential reliability issues.
+    Values above 90 typically trigger conservation alerts.
+
+    Args:
+        iso_region: ISO region code
+        timestamp: Reference timestamp
+
+    Returns:
+        Load as percentage of capacity
+    """
+    # This is essentially the same as load_capacity_ratio but
+    # with different interpretation/scaling
+    return calc_load_capacity_ratio(iso_region, timestamp)
+
+
+def calc_cross_iso_flow(
+    iso_region: str,
+    timestamp: datetime,
+    lookback_hours: int = 24,
+) -> Optional[float]:
+    """Calculate inter-regional power transfer flow.
+
+    Positive values indicate net imports, negative indicate net exports.
+    Large flows may indicate regional supply/demand imbalances.
+
+    Args:
+        iso_region: ISO region code
+        timestamp: Reference timestamp
+        lookback_hours: Hours of data to average
+
+    Returns:
+        Net flow in MW (positive = import, negative = export)
+    """
+    session = SessionLocal()
+    try:
+        start = timestamp - timedelta(hours=lookback_hours)
+
+        loads = (
+            session.query(GridLoad)
+            .filter(
+                GridLoad.iso_region == iso_region,
+                GridLoad.timestamp >= start,
+                GridLoad.timestamp <= timestamp,
+            )
+            .all()
+        )
+
+        if not loads:
+            return None
+
+        # Calculate net interchange (load - generation typically = imports)
+        # If we have interchange data directly, use that
+        interchanges = []
+        for load in loads:
+            if hasattr(load, 'interchange_mw') and load.interchange_mw is not None:
+                interchanges.append(load.interchange_mw)
+            elif load.load_mw and hasattr(load, 'generation_mw') and load.generation_mw:
+                # Net interchange = load - generation (positive = importing)
+                interchanges.append(load.load_mw - load.generation_mw)
+
+        if not interchanges:
+            return None
+
+        return sum(interchanges) / len(interchanges)
+    finally:
+        session.close()
+
+
+@FactorRegistry.register
+class IndustrialLoadIndex(BaseFactor):
+    """Industrial Load Index Factor.
+
+    Overnight base load as proxy for industrial activity.
+    Higher values indicate more industrial production.
+    """
+
+    FACTOR_NAME = "industrial_load_index"
+    FACTOR_DESCRIPTION = "Overnight base load as industrial activity proxy"
+    CATEGORY = "power_grid"
+    ENTITY_TYPE = "iso_region"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 1
+
+    def compute(
+        self,
+        entity_id: str,  # ISO region code
+        as_of_date: datetime,
+    ) -> Optional[float]:
+        """Compute industrial load index.
+
+        Args:
+            entity_id: ISO region code (CAISO, ERCOT, PJM, MISO)
+            as_of_date: Timestamp for computation
+
+        Returns:
+            Average overnight load in MW
+        """
+        return calc_industrial_load_index(entity_id, as_of_date)
+
+
+@FactorRegistry.register
+class WeatherAdjustedDemand(BaseFactor):
+    """Weather Adjusted Demand Factor.
+
+    Actual demand minus forecast (weather-predicted) demand.
+    Positive values indicate economic activity exceeding weather expectations.
+    """
+
+    FACTOR_NAME = "weather_adjusted_demand"
+    FACTOR_DESCRIPTION = "Demand surplus/deficit vs weather-based forecast"
+    CATEGORY = "power_grid"
+    ENTITY_TYPE = "iso_region"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 1
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_hours: int = 24,
+    ) -> Optional[float]:
+        """Compute weather-adjusted demand.
+
+        Args:
+            entity_id: ISO region code
+            as_of_date: Date for computation
+            lookback_hours: Hours to average
+
+        Returns:
+            Average demand surprise in MW
+        """
+        return calc_weather_adjusted_demand(entity_id, as_of_date, lookback_hours)
+
+
+@FactorRegistry.register
+class PeakDemandRatio(BaseFactor):
+    """Peak Demand Ratio Factor.
+
+    Current demand as percentage of historical peak.
+    High ratios indicate strong demand conditions.
+    """
+
+    FACTOR_NAME = "peak_demand_ratio"
+    FACTOR_DESCRIPTION = "Current demand vs historical peak percentage"
+    CATEGORY = "power_grid"
+    ENTITY_TYPE = "iso_region"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 365
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        historical_days: int = 365,
+    ) -> Optional[float]:
+        """Compute peak demand ratio.
+
+        Args:
+            entity_id: ISO region code
+            as_of_date: Date for computation
+            historical_days: Days of history for peak
+
+        Returns:
+            Current/Peak ratio as percentage
+        """
+        return calc_peak_demand_ratio(entity_id, as_of_date, historical_days)
+
+
+@FactorRegistry.register
+class GridStressIndicator(BaseFactor):
+    """Grid Stress Indicator Factor.
+
+    Load as percentage of available capacity.
+    Values above 90% indicate potential reliability concerns.
+    """
+
+    FACTOR_NAME = "grid_stress_indicator"
+    FACTOR_DESCRIPTION = "Grid load vs capacity stress level"
+    CATEGORY = "power_grid"
+    ENTITY_TYPE = "iso_region"
+    FREQUENCY = "hourly"
+    LOOKBACK_DAYS = 0
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+    ) -> Optional[float]:
+        """Compute grid stress indicator.
+
+        Args:
+            entity_id: ISO region code
+            as_of_date: Timestamp for computation
+
+        Returns:
+            Load/Capacity ratio as percentage
+        """
+        return calc_grid_stress_indicator(entity_id, as_of_date)
+
+
+@FactorRegistry.register
+class CrossISOFlow(BaseFactor):
+    """Cross-ISO Flow Factor.
+
+    Inter-regional power transfer volume.
+    Positive = importing, Negative = exporting.
+    """
+
+    FACTOR_NAME = "cross_iso_flow"
+    FACTOR_DESCRIPTION = "Net inter-regional power transfer in MW"
+    CATEGORY = "power_grid"
+    ENTITY_TYPE = "market"
+    FREQUENCY = "hourly"
+    LOOKBACK_DAYS = 1
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_hours: int = 24,
+    ) -> Optional[float]:
+        """Compute cross-ISO flow.
+
+        Args:
+            entity_id: ISO region code
+            as_of_date: Date for computation
+            lookback_hours: Hours to average
+
+        Returns:
+            Net flow in MW
+        """
+        return calc_cross_iso_flow(entity_id, as_of_date, lookback_hours)

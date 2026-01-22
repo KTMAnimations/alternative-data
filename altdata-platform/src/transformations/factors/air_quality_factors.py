@@ -398,3 +398,330 @@ class RegionalAQI(BaseFactor):
             Average AQI
         """
         return calc_regional_aqi(entity_id, as_of_date, lookback_hours)
+
+
+def calc_pollution_yoy_change(
+    location_id: str,
+    as_of_date: datetime,
+    parameter: str = "pm25",
+    comparison_days: int = 7,
+) -> Optional[float]:
+    """Calculate year-over-year pollution change.
+
+    Compares current period to same period last year.
+    Positive values indicate worsening air quality.
+
+    Args:
+        location_id: OpenAQ location ID
+        as_of_date: Reference timestamp
+        parameter: Air quality parameter (pm25, no2, etc.)
+        comparison_days: Days to compare
+
+    Returns:
+        Percentage change vs same period last year
+    """
+    session = SessionLocal()
+    try:
+        # Current period
+        current_start = as_of_date - timedelta(days=comparison_days)
+        current_avg = (
+            session.query(func.avg(AirQualityMeasurement.value))
+            .filter(
+                AirQualityMeasurement.location_id == location_id,
+                AirQualityMeasurement.parameter == parameter,
+                AirQualityMeasurement.timestamp >= current_start,
+                AirQualityMeasurement.timestamp <= as_of_date,
+            )
+            .scalar()
+        )
+
+        # Same period last year
+        yoy_end = as_of_date - timedelta(days=365)
+        yoy_start = yoy_end - timedelta(days=comparison_days)
+        yoy_avg = (
+            session.query(func.avg(AirQualityMeasurement.value))
+            .filter(
+                AirQualityMeasurement.location_id == location_id,
+                AirQualityMeasurement.parameter == parameter,
+                AirQualityMeasurement.timestamp >= yoy_start,
+                AirQualityMeasurement.timestamp <= yoy_end,
+            )
+            .scalar()
+        )
+
+        if current_avg is None or yoy_avg is None or yoy_avg == 0:
+            return None
+
+        return ((float(current_avg) - float(yoy_avg)) / float(yoy_avg)) * 100
+
+    finally:
+        session.close()
+
+
+def calc_seasonal_adjusted_aqi(
+    location_id: str,
+    as_of_date: datetime,
+    parameter: str = "pm25",
+    seasonal_lookback_years: int = 2,
+) -> Optional[float]:
+    """Calculate seasonally adjusted air quality.
+
+    Compares current value to historical same-season average.
+    Removes seasonal patterns to reveal underlying trends.
+
+    Args:
+        location_id: OpenAQ location ID
+        as_of_date: Reference timestamp
+        parameter: Air quality parameter
+        seasonal_lookback_years: Years of historical data
+
+    Returns:
+        Seasonally adjusted AQI (current - seasonal average)
+    """
+    session = SessionLocal()
+    try:
+        # Get current week's day of year
+        day_of_year = as_of_date.timetuple().tm_yday
+        day_window = 15  # +/- 15 days around same day of year
+
+        # Current value (last 24 hours)
+        current_start = as_of_date - timedelta(hours=24)
+        current_avg = (
+            session.query(func.avg(AirQualityMeasurement.value))
+            .filter(
+                AirQualityMeasurement.location_id == location_id,
+                AirQualityMeasurement.parameter == parameter,
+                AirQualityMeasurement.timestamp >= current_start,
+                AirQualityMeasurement.timestamp <= as_of_date,
+            )
+            .scalar()
+        )
+
+        if current_avg is None:
+            return None
+
+        # Historical same-season average
+        historical_values = []
+        for years_back in range(1, seasonal_lookback_years + 1):
+            historical_date = as_of_date - timedelta(days=365 * years_back)
+            hist_start = historical_date - timedelta(days=day_window)
+            hist_end = historical_date + timedelta(days=day_window)
+
+            hist_avg = (
+                session.query(func.avg(AirQualityMeasurement.value))
+                .filter(
+                    AirQualityMeasurement.location_id == location_id,
+                    AirQualityMeasurement.parameter == parameter,
+                    AirQualityMeasurement.timestamp >= hist_start,
+                    AirQualityMeasurement.timestamp <= hist_end,
+                )
+                .scalar()
+            )
+
+            if hist_avg:
+                historical_values.append(float(hist_avg))
+
+        if not historical_values:
+            return None
+
+        seasonal_avg = sum(historical_values) / len(historical_values)
+
+        # Return deviation from seasonal norm
+        return float(current_avg) - seasonal_avg
+
+    finally:
+        session.close()
+
+
+def calc_cross_border_pollution(
+    source_city: str,
+    target_city: str,
+    as_of_date: datetime,
+    parameter: str = "pm25",
+    lookback_hours: int = 48,
+) -> Optional[float]:
+    """Calculate cross-border pollution spillover.
+
+    Measures correlation between pollution levels in adjacent regions.
+    High correlation may indicate pollution transport.
+
+    Args:
+        source_city: Source city name
+        target_city: Target city name
+        as_of_date: Reference timestamp
+        parameter: Air quality parameter
+        lookback_hours: Hours of data to analyze
+
+    Returns:
+        Pollution spillover ratio (source impact on target)
+    """
+    session = SessionLocal()
+    try:
+        start_time = as_of_date - timedelta(hours=lookback_hours)
+
+        # Get source city locations
+        source_locations = (
+            session.query(AirQualityLocation.location_id)
+            .filter(AirQualityLocation.city == source_city)
+            .all()
+        )
+        source_ids = [loc.location_id for loc in source_locations]
+
+        # Get target city locations
+        target_locations = (
+            session.query(AirQualityLocation.location_id)
+            .filter(AirQualityLocation.city == target_city)
+            .all()
+        )
+        target_ids = [loc.location_id for loc in target_locations]
+
+        if not source_ids or not target_ids:
+            return None
+
+        # Get source average
+        source_avg = (
+            session.query(func.avg(AirQualityMeasurement.value))
+            .filter(
+                AirQualityMeasurement.location_id.in_(source_ids),
+                AirQualityMeasurement.parameter == parameter,
+                AirQualityMeasurement.timestamp >= start_time,
+                AirQualityMeasurement.timestamp <= as_of_date,
+            )
+            .scalar()
+        )
+
+        # Get target average
+        target_avg = (
+            session.query(func.avg(AirQualityMeasurement.value))
+            .filter(
+                AirQualityMeasurement.location_id.in_(target_ids),
+                AirQualityMeasurement.parameter == parameter,
+                AirQualityMeasurement.timestamp >= start_time,
+                AirQualityMeasurement.timestamp <= as_of_date,
+            )
+            .scalar()
+        )
+
+        if source_avg is None or target_avg is None or source_avg == 0:
+            return None
+
+        # Return ratio (how much of source pollution appears in target)
+        return (float(target_avg) / float(source_avg)) * 100
+
+    finally:
+        session.close()
+
+
+@FactorRegistry.register
+class PollutionYoYChange(BaseFactor):
+    """Pollution Year-over-Year Change Factor.
+
+    Compares current pollution to same period last year.
+    Positive values indicate worsening conditions.
+    """
+
+    FACTOR_NAME = "pollution_yoy_change"
+    FACTOR_DESCRIPTION = "Year-over-year pollution change percentage"
+    CATEGORY = "air_quality"
+    ENTITY_TYPE = "location"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 7
+
+    def compute(
+        self,
+        entity_id: str,  # Location ID
+        as_of_date: datetime,
+        parameter: str = "pm25",
+    ) -> Optional[float]:
+        """Compute pollution YoY change.
+
+        Args:
+            entity_id: Location ID
+            as_of_date: Date for computation
+            parameter: Air quality parameter
+
+        Returns:
+            Percentage change vs last year
+        """
+        return calc_pollution_yoy_change(entity_id, as_of_date, parameter)
+
+
+@FactorRegistry.register
+class SeasonalAdjustedAQI(BaseFactor):
+    """Seasonally Adjusted AQI Factor.
+
+    Air quality with seasonal patterns removed.
+    Positive values indicate worse than seasonal norm.
+    """
+
+    FACTOR_NAME = "seasonal_adjusted_aqi"
+    FACTOR_DESCRIPTION = "Deseasonalized air quality index"
+    CATEGORY = "air_quality"
+    ENTITY_TYPE = "location"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 1
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        parameter: str = "pm25",
+    ) -> Optional[float]:
+        """Compute seasonally adjusted AQI.
+
+        Args:
+            entity_id: Location ID
+            as_of_date: Date for computation
+            parameter: Air quality parameter
+
+        Returns:
+            Deviation from seasonal norm
+        """
+        return calc_seasonal_adjusted_aqi(entity_id, as_of_date, parameter)
+
+
+@FactorRegistry.register
+class CrossBorderPollution(BaseFactor):
+    """Cross-Border Pollution Factor.
+
+    Measures pollution spillover between regions.
+    Useful for tracking regional air quality impacts.
+    """
+
+    FACTOR_NAME = "cross_border_pollution"
+    FACTOR_DESCRIPTION = "Regional pollution spillover indicator"
+    CATEGORY = "air_quality"
+    ENTITY_TYPE = "region"
+    FREQUENCY = "daily"
+    LOOKBACK_DAYS = 2
+
+    # Default city pairs for cross-border analysis
+    CITY_PAIRS = {
+        "beijing_tianjin": ("Beijing", "Tianjin"),
+        "la_riverside": ("Los Angeles", "Riverside"),
+        "newark_nyc": ("Newark", "New York"),
+    }
+
+    def compute(
+        self,
+        entity_id: str,  # Region pair ID like "beijing_tianjin"
+        as_of_date: datetime,
+        parameter: str = "pm25",
+    ) -> Optional[float]:
+        """Compute cross-border pollution.
+
+        Args:
+            entity_id: Region pair identifier
+            as_of_date: Date for computation
+            parameter: Air quality parameter
+
+        Returns:
+            Spillover ratio percentage
+        """
+        if entity_id not in self.CITY_PAIRS:
+            return None
+
+        source_city, target_city = self.CITY_PAIRS[entity_id]
+        return calc_cross_border_pollution(
+            source_city, target_city, as_of_date, parameter
+        )

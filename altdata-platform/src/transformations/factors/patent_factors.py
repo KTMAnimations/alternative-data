@@ -405,3 +405,338 @@ class TimeToGrant(BaseFactor):
         """
         ref_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
         return calc_time_to_grant(entity_id, ref_date, lookback_days)
+
+
+def calc_patent_grant_rate(
+    entity_id: str,
+    as_of_date: date,
+    lookback_days: int = 730,  # 2 years for applications -> grants cycle
+) -> Optional[float]:
+    """Calculate patent grant rate (grants / applications).
+
+    Higher rates may indicate higher quality patent filings.
+
+    Args:
+        entity_id: Company entity ID
+        as_of_date: Reference date
+        lookback_days: Days to look back
+
+    Returns:
+        Grant rate as percentage (0-100)
+    """
+    session = SessionLocal()
+    try:
+        start_date = as_of_date - timedelta(days=lookback_days)
+
+        # Count grants
+        grants = (
+            session.query(func.count(Patent.id))
+            .join(PatentAssignee, Patent.patent_number == PatentAssignee.patent_number)
+            .filter(
+                PatentAssignee.entity_id == entity_id,
+                Patent.grant_date >= start_date,
+                Patent.grant_date <= as_of_date,
+            )
+            .scalar()
+        ) or 0
+
+        # Count applications
+        applications = (
+            session.query(func.count(PatentApplication.id))
+            .filter(
+                PatentApplication.assignee_id == entity_id,
+                PatentApplication.filing_date >= start_date,
+                PatentApplication.filing_date <= as_of_date,
+            )
+            .scalar()
+        ) or 0
+
+        if applications == 0:
+            return None
+
+        return (grants / applications) * 100
+    finally:
+        session.close()
+
+
+def calc_patent_breadth_index(
+    entity_id: str,
+    as_of_date: date,
+    lookback_days: int = 365,
+) -> Optional[float]:
+    """Calculate patent breadth index (CPC code diversity).
+
+    More diverse CPC codes indicate broader R&D portfolio
+    and potentially more innovative capacity.
+
+    Args:
+        entity_id: Company entity ID
+        as_of_date: Reference date
+        lookback_days: Days to look back
+
+    Returns:
+        Number of unique CPC top-level classes
+    """
+    session = SessionLocal()
+    try:
+        start_date = as_of_date - timedelta(days=lookback_days)
+
+        # Get unique CPC classes (just the section letter for diversity)
+        patents = (
+            session.query(Patent.primary_class)
+            .join(PatentAssignee, Patent.patent_number == PatentAssignee.patent_number)
+            .filter(
+                PatentAssignee.entity_id == entity_id,
+                Patent.grant_date >= start_date,
+                Patent.grant_date <= as_of_date,
+                Patent.primary_class.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+
+        if not patents:
+            return None
+
+        # Extract unique top-level classes (e.g., "H04L" -> "H")
+        unique_sections = set()
+        for (cpc_class,) in patents:
+            if cpc_class and len(cpc_class) > 0:
+                # Get the section (first character) and class (first 3 chars)
+                unique_sections.add(cpc_class[:3] if len(cpc_class) >= 3 else cpc_class)
+
+        return float(len(unique_sections))
+    finally:
+        session.close()
+
+
+def calc_inventor_retention(
+    entity_id: str,
+    as_of_date: date,
+    lookback_days: int = 730,  # 2 years
+) -> Optional[float]:
+    """Calculate inventor retention rate.
+
+    Percentage of inventors with multiple patents for the company.
+    Higher retention may indicate better R&D culture.
+
+    Args:
+        entity_id: Company entity ID
+        as_of_date: Reference date
+        lookback_days: Days to look back
+
+    Returns:
+        Retention rate as percentage
+    """
+    session = SessionLocal()
+    try:
+        from src.models.patents import PatentInventor
+
+        start_date = as_of_date - timedelta(days=lookback_days)
+
+        # Get all inventors for this company's patents
+        inventor_counts = (
+            session.query(
+                PatentInventor.inventor_name,
+                func.count(PatentInventor.id).label('patent_count')
+            )
+            .join(Patent, PatentInventor.patent_number == Patent.patent_number)
+            .join(PatentAssignee, Patent.patent_number == PatentAssignee.patent_number)
+            .filter(
+                PatentAssignee.entity_id == entity_id,
+                Patent.grant_date >= start_date,
+                Patent.grant_date <= as_of_date,
+            )
+            .group_by(PatentInventor.inventor_name)
+            .all()
+        )
+
+        if not inventor_counts:
+            return None
+
+        total_inventors = len(inventor_counts)
+        repeat_inventors = sum(1 for _, count in inventor_counts if count > 1)
+
+        return (repeat_inventors / total_inventors) * 100
+    finally:
+        session.close()
+
+
+def calc_r_and_d_intensity_proxy(
+    entity_id: str,
+    as_of_date: date,
+    lookback_days: int = 365,
+) -> Optional[float]:
+    """Calculate R&D intensity proxy from patent activity.
+
+    Patents per quarter normalized by company size proxy.
+    Higher values indicate more R&D intensive operations.
+
+    Args:
+        entity_id: Company entity ID
+        as_of_date: Reference date
+        lookback_days: Days to look back
+
+    Returns:
+        Patents per quarter (as R&D proxy)
+    """
+    session = SessionLocal()
+    try:
+        start_date = as_of_date - timedelta(days=lookback_days)
+
+        count = (
+            session.query(func.count(Patent.id))
+            .join(PatentAssignee, Patent.patent_number == PatentAssignee.patent_number)
+            .filter(
+                PatentAssignee.entity_id == entity_id,
+                Patent.grant_date >= start_date,
+                Patent.grant_date <= as_of_date,
+            )
+            .scalar()
+        ) or 0
+
+        # Return patents per quarter
+        quarters = lookback_days / 90.0
+        return count / quarters if quarters > 0 else 0.0
+    finally:
+        session.close()
+
+
+@FactorRegistry.register
+class PatentGrantRate(BaseFactor):
+    """Patent Grant Rate Factor.
+
+    Ratio of granted patents to applications filed.
+    Higher rates may indicate patent quality.
+    """
+
+    FACTOR_NAME = "patent_grant_rate"
+    FACTOR_DESCRIPTION = "Patent grants as percentage of applications"
+    CATEGORY = "patents"
+    ENTITY_TYPE = "company"
+    FREQUENCY = "quarterly"
+    LOOKBACK_DAYS = 730
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_days: int = 730,
+    ) -> Optional[float]:
+        """Compute patent grant rate.
+
+        Args:
+            entity_id: Company entity ID
+            as_of_date: Date for computation
+            lookback_days: Lookback period
+
+        Returns:
+            Grant rate percentage
+        """
+        ref_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
+        return calc_patent_grant_rate(entity_id, ref_date, lookback_days)
+
+
+@FactorRegistry.register
+class PatentBreadthIndex(BaseFactor):
+    """Patent Breadth Index Factor.
+
+    Diversity of CPC classifications in patent portfolio.
+    Higher values indicate broader R&D coverage.
+    """
+
+    FACTOR_NAME = "patent_breadth_index"
+    FACTOR_DESCRIPTION = "Diversity of patent classification codes"
+    CATEGORY = "patents"
+    ENTITY_TYPE = "company"
+    FREQUENCY = "quarterly"
+    LOOKBACK_DAYS = 365
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_days: int = 365,
+    ) -> Optional[float]:
+        """Compute patent breadth index.
+
+        Args:
+            entity_id: Company entity ID
+            as_of_date: Date for computation
+            lookback_days: Lookback period
+
+        Returns:
+            Unique CPC class count
+        """
+        ref_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
+        return calc_patent_breadth_index(entity_id, ref_date, lookback_days)
+
+
+@FactorRegistry.register
+class RAndDIntensityProxy(BaseFactor):
+    """R&D Intensity Proxy Factor.
+
+    Patent activity normalized by time as R&D investment proxy.
+    Higher values indicate more R&D intensive companies.
+    """
+
+    FACTOR_NAME = "r_and_d_intensity_proxy"
+    FACTOR_DESCRIPTION = "Patents per quarter as R&D intensity proxy"
+    CATEGORY = "patents"
+    ENTITY_TYPE = "company"
+    FREQUENCY = "quarterly"
+    LOOKBACK_DAYS = 365
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_days: int = 365,
+    ) -> Optional[float]:
+        """Compute R&D intensity proxy.
+
+        Args:
+            entity_id: Company entity ID
+            as_of_date: Date for computation
+            lookback_days: Lookback period
+
+        Returns:
+            Patents per quarter
+        """
+        ref_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
+        return calc_r_and_d_intensity_proxy(entity_id, ref_date, lookback_days)
+
+
+@FactorRegistry.register
+class InventorRetention(BaseFactor):
+    """Inventor Retention Factor.
+
+    Percentage of inventors with multiple patents.
+    Higher retention indicates strong R&D culture.
+    """
+
+    FACTOR_NAME = "inventor_retention"
+    FACTOR_DESCRIPTION = "Percentage of repeat inventors"
+    CATEGORY = "patents"
+    ENTITY_TYPE = "company"
+    FREQUENCY = "annually"
+    LOOKBACK_DAYS = 730
+
+    def compute(
+        self,
+        entity_id: str,
+        as_of_date: datetime,
+        lookback_days: int = 730,
+    ) -> Optional[float]:
+        """Compute inventor retention rate.
+
+        Args:
+            entity_id: Company entity ID
+            as_of_date: Date for computation
+            lookback_days: Lookback period
+
+        Returns:
+            Retention percentage
+        """
+        ref_date = as_of_date.date() if isinstance(as_of_date, datetime) else as_of_date
+        return calc_inventor_retention(entity_id, ref_date, lookback_days)
