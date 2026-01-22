@@ -8,11 +8,12 @@ from fastapi.testclient import TestClient
 
 # Set test environment before imports
 os.environ["ENVIRONMENT"] = "test"
-os.environ["DATABASE_URL"] = "postgresql://localhost/altdata_test"
-os.environ["REDIS_URL"] = "redis://localhost:6379/1"
+os.environ["DATABASE_URL"] = "postgresql://postgres:devpassword@localhost:5432/altdata_dev"
+os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 os.environ["USE_LOCAL_STORAGE"] = "true"
 os.environ["SKIP_RATE_LIMITS"] = "true"
 os.environ["API_KEY_DEFAULT"] = "test-api-key"
+os.environ["API_KEY_ADMIN"] = "admin-test-key-12345"
 
 
 @pytest.fixture(scope="session")
@@ -40,16 +41,16 @@ def authenticated_client(api_client: TestClient, api_key: str) -> TestClient:
 @pytest.fixture(scope="session")
 def db_engine():
     """Create test database engine.
-    
+
     Note: Requires PostgreSQL to be running with test database created.
     """
     from sqlalchemy import create_engine
-    
+
     test_db_url = os.environ.get(
-        "TEST_DATABASE_URL",
-        "postgresql://localhost/altdata_test"
+        "DATABASE_URL",
+        "postgresql://postgres:devpassword@localhost:5432/altdata_dev"
     )
-    
+
     engine = create_engine(test_db_url, echo=False)
     yield engine
     engine.dispose()

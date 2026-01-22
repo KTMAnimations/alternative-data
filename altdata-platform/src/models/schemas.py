@@ -28,8 +28,8 @@ class RawDataCatalog(Base):
     checksum = Column(String(64), nullable=False)
     record_count = Column(Integer)
     file_size_bytes = Column(BigInteger)
-    metadata = Column(JSON)
-    
+    extra_data = Column(JSON)
+
     __table_args__ = (
         Index("ix_raw_data_source_timestamp", "source", "fetch_timestamp"),
     )
@@ -54,7 +54,7 @@ class Entity(Base):
     sector = Column(String(100))
     industry = Column(String(100))
     aliases = Column(JSON)
-    metadata = Column(JSON)
+    extra_data = Column(JSON)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -81,8 +81,8 @@ class Factor(Base):
     computed_at = Column(DateTime(timezone=True), nullable=False)
     version = Column(Integer, nullable=False, default=1)
     source_data_ids = Column(ARRAY(BigInteger))
-    metadata = Column(JSON)
-    
+    extra_data = Column(JSON)
+
     __table_args__ = (
         Index("ix_factor_name_entity_date", "factor_name", "entity_id", "effective_date"),
         Index("ix_factor_entity_date", "entity_id", "effective_date"),
@@ -152,8 +152,8 @@ class SECForm4Transaction(Base):
     
     # Lineage
     raw_data_id = Column(BigInteger, ForeignKey("raw_data_catalog.id"))
-    metadata = Column(JSON)
-    
+    extra_data = Column(JSON)
+
     __table_args__ = (
         Index("ix_form4_ticker_date", "ticker", "transaction_date"),
         Index("ix_form4_insider_date", "insider_cik", "transaction_date"),
@@ -183,8 +183,8 @@ class SECFiling(Base):
     risk_score = Column(Float)
     
     raw_data_id = Column(BigInteger, ForeignKey("raw_data_catalog.id"))
-    metadata = Column(JSON)
-    
+    extra_data = Column(JSON)
+
     __table_args__ = (
         Index("ix_filing_type_date", "form_type", "filed_date"),
     )

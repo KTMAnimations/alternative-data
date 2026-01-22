@@ -1,14 +1,27 @@
 """FastAPI application for the Alternative Data Platform."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
+import redis
 from fastapi import FastAPI, HTTPException, Depends, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from src.config.settings import settings
-from src.models.database import get_db, check_database_connection
+from src.models.database import get_db, check_database_connection, SessionLocal
+from src.models.schemas import Entity, Factor, FactorDefinition
+from src.transformations.base import FactorRegistry
+
+# Import factors to register them
+from src.transformations.factors import (
+    InsiderTransactionMomentum,
+    InsiderClusteringScore,
+    EventVelocity8K,
+    YieldCurveSlope,
+    CreditSpreadIndex,
+)
 
 # ===========================================
 # APPLICATION SETUP
@@ -31,6 +44,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Redis cache
+_redis_client = None
+
+
+def get_redis():
+    """Get Redis client (lazy initialization)."""
+    global _redis_client
+    if _redis_client is None:
+        try:
+            _redis_client = redis.from_url(settings.redis_url)
+            _redis_client.ping()
+        except Exception:
+            _redis_client = None
+    return _redis_client
+
 
 # ===========================================
 # SCHEMAS
@@ -40,6 +68,7 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: datetime
     database: str
+    redis: str
     version: str
 
 
@@ -97,19 +126,19 @@ class ErrorResponse(BaseModel):
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
     """Verify API key from header.
-    
+
     In production, this would check against the database.
     For MVP, we use simple environment variable check.
     """
     if settings.is_development and not x_api_key:
         return "development"
-    
+
     if not x_api_key:
         raise HTTPException(
             status_code=401,
             detail="API key required. Pass via X-API-Key header."
         )
-    
+
     # Check against configured keys
     valid_keys = [settings.api_key_admin, settings.api_key_default]
     if x_api_key not in valid_keys:
@@ -117,7 +146,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
             status_code=401,
             detail="Invalid API key"
         )
-    
+
     return x_api_key
 
 
@@ -129,11 +158,25 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
 async def health_check():
     """Check system health status."""
     db_status = "connected" if check_database_connection() else "disconnected"
-    
+
+    redis_status = "disconnected"
+    redis_client = get_redis()
+    if redis_client:
+        try:
+            redis_client.ping()
+            redis_status = "connected"
+        except Exception:
+            redis_status = "disconnected"
+
+    status = "healthy"
+    if db_status != "connected":
+        status = "degraded"
+
     return HealthResponse(
-        status="healthy" if db_status == "connected" else "degraded",
+        status=status,
         timestamp=datetime.utcnow(),
         database=db_status,
+        redis=redis_status,
         version="1.0.0",
     )
 
@@ -144,49 +187,23 @@ async def list_factors(
     api_key: str = Depends(verify_api_key),
 ):
     """List all available factors."""
-    # TODO: Query from database
-    # For MVP, return hardcoded list
+    # Get factors from registry
+    all_factors = FactorRegistry.list_factors()
+
     factors = [
         FactorListItem(
-            id="insider_transaction_momentum",
-            name="Insider Transaction Momentum",
-            description="Net insider buying/selling from Form 4 filings over 30 days",
-            category="sec",
-            frequency="daily",
-        ),
-        FactorListItem(
-            id="insider_clustering_score",
-            name="Insider Clustering Score",
-            description="Number of unique insiders trading in same direction within 7 days",
-            category="sec",
-            frequency="daily",
-        ),
-        FactorListItem(
-            id="8k_event_velocity",
-            name="8-K Event Velocity",
-            description="Number of 8-K filings in rolling 30-day window",
-            category="sec",
-            frequency="daily",
-        ),
-        FactorListItem(
-            id="yield_curve_slope",
-            name="Yield Curve Slope",
-            description="10Y Treasury minus 2Y Treasury yield",
-            category="macro",
-            frequency="daily",
-        ),
-        FactorListItem(
-            id="credit_spread_index",
-            name="Credit Spread Index",
-            description="BAA corporate bond spread over 10Y Treasury",
-            category="macro",
-            frequency="daily",
-        ),
+            id=f["id"],
+            name=f["id"].replace("_", " ").title(),
+            description=f.get("description"),
+            category=f["category"],
+            frequency=f["frequency"],
+        )
+        for f in all_factors
     ]
-    
+
     if category:
         factors = [f for f in factors if f.category == category]
-    
+
     return FactorListResponse(factors=factors, total=len(factors))
 
 
@@ -204,35 +221,74 @@ async def get_factor(
     api_key: str = Depends(verify_api_key),
 ):
     """Get factor values for an entity."""
-    # TODO: Query from database
-    # For MVP, return mock data
-    
-    valid_factors = [
-        "insider_transaction_momentum",
-        "insider_clustering_score", 
-        "8k_event_velocity",
-        "yield_curve_slope",
-        "credit_spread_index",
-    ]
-    
-    if factor_name not in valid_factors:
+    # Check if factor exists in registry
+    factor_class = FactorRegistry.get(factor_name)
+    if not factor_class:
         raise HTTPException(status_code=404, detail=f"Factor '{factor_name}' not found")
-    
-    # Mock response
-    return FactorResponse(
-        factor_name=factor_name,
-        entity_id=entity_id,
-        entity_type="company",
-        values=[
-            FactorValue(date=datetime(2024, 1, 15), value=1250000.0),
-            FactorValue(date=datetime(2024, 1, 16), value=980000.0),
-            FactorValue(date=datetime(2024, 1, 17), value=1100000.0),
-        ],
-        metadata={
-            "computed_at": datetime.utcnow().isoformat(),
-            "data_freshness": "2024-01-17T23:59:59Z",
-        }
-    )
+
+    # Set default date range
+    if not end_date:
+        end_date = datetime.utcnow()
+    if not start_date:
+        start_date = end_date - timedelta(days=30)
+
+    # Query factors from database
+    session = SessionLocal()
+    try:
+        query = (
+            session.query(Factor)
+            .filter(
+                Factor.factor_name == factor_name,
+                Factor.entity_id == entity_id,
+                Factor.effective_date >= start_date,
+                Factor.effective_date <= end_date,
+            )
+            .order_by(Factor.effective_date.desc())
+        )
+
+        results = query.all()
+
+        values = [
+            FactorValue(
+                date=r.effective_date,
+                value=r.value,
+                version=r.version,
+            )
+            for r in results
+        ]
+
+        # If no stored values, compute current value
+        if not values:
+            factor_instance = factor_class()
+            current_value = factor_instance.compute(entity_id, as_of_date=end_date)
+            if current_value is not None:
+                values = [
+                    FactorValue(
+                        date=end_date,
+                        value=current_value,
+                        version=1,
+                    )
+                ]
+
+        entity_type = "company"
+        if results:
+            entity_type = results[0].entity_type
+        else:
+            factor_instance = factor_class()
+            entity_type = factor_instance.ENTITY_TYPE
+
+        return FactorResponse(
+            factor_name=factor_name,
+            entity_id=entity_id,
+            entity_type=entity_type,
+            values=values,
+            metadata={
+                "computed_at": datetime.utcnow().isoformat(),
+                "data_freshness": end_date.isoformat() if results else None,
+            }
+        )
+    finally:
+        session.close()
 
 
 @app.get("/api/v1/entities", response_model=EntityListResponse, tags=["Entities"])
@@ -244,40 +300,46 @@ async def list_entities(
     api_key: str = Depends(verify_api_key),
 ):
     """List and search entities."""
-    # TODO: Query from database
-    # Mock response
-    entities = [
-        EntityResponse(
-            id="AAPL",
-            name="Apple Inc.",
-            ticker="AAPL",
-            entity_type="company",
-            sector="Technology",
-            industry="Consumer Electronics",
-        ),
-        EntityResponse(
-            id="TSLA",
-            name="Tesla, Inc.",
-            ticker="TSLA",
-            entity_type="company",
-            sector="Consumer Cyclical",
-            industry="Auto Manufacturers",
-        ),
-    ]
-    
-    if search:
-        search_lower = search.lower()
+    session = SessionLocal()
+    try:
+        query = session.query(Entity)
+
+        if entity_type:
+            query = query.filter(Entity.entity_type == entity_type)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (Entity.name.ilike(search_pattern)) |
+                (Entity.ticker.ilike(search_pattern))
+            )
+
+        total = query.count()
+
+        # Pagination
+        offset = (page - 1) * page_size
+        results = query.offset(offset).limit(page_size).all()
+
         entities = [
-            e for e in entities 
-            if search_lower in e.name.lower() or search_lower in (e.ticker or "").lower()
+            EntityResponse(
+                id=e.id,
+                name=e.name,
+                ticker=e.ticker,
+                entity_type=e.entity_type,
+                sector=e.sector,
+                industry=e.industry,
+            )
+            for e in results
         ]
-    
-    return EntityListResponse(
-        entities=entities,
-        total=len(entities),
-        page=page,
-        page_size=page_size,
-    )
+
+        return EntityListResponse(
+            entities=entities,
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+    finally:
+        session.close()
 
 
 @app.get(
@@ -291,32 +353,27 @@ async def get_entity(
     api_key: str = Depends(verify_api_key),
 ):
     """Get entity details by ID."""
-    # TODO: Query from database
-    
-    # Mock for known entities
-    entities = {
-        "AAPL": EntityResponse(
-            id="AAPL",
-            name="Apple Inc.",
-            ticker="AAPL",
-            entity_type="company",
-            sector="Technology",
-            industry="Consumer Electronics",
-        ),
-        "TSLA": EntityResponse(
-            id="TSLA",
-            name="Tesla, Inc.",
-            ticker="TSLA",
-            entity_type="company",
-            sector="Consumer Cyclical",
-            industry="Auto Manufacturers",
-        ),
-    }
-    
-    if entity_id not in entities:
-        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
-    
-    return entities[entity_id]
+    session = SessionLocal()
+    try:
+        entity = session.query(Entity).filter_by(id=entity_id).first()
+
+        if not entity:
+            # Also try by ticker
+            entity = session.query(Entity).filter_by(ticker=entity_id).first()
+
+        if not entity:
+            raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
+
+        return EntityResponse(
+            id=entity.id,
+            name=entity.name,
+            ticker=entity.ticker,
+            entity_type=entity.entity_type,
+            sector=entity.sector,
+            industry=entity.industry,
+        )
+    finally:
+        session.close()
 
 
 @app.get("/api/v1/sources", tags=["Sources"])
