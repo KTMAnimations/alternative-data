@@ -166,9 +166,9 @@ async def backfill_sec_edgar(start_date: date, end_date: date):
 async def backfill_fred(start_date: date, end_date: date):
     """Backfill FRED economic series."""
     logger.info(f"Backfilling FRED from {start_date} to {end_date}")
-    
+
     collector = _get_fred_collector()
-    
+
     # Key series to backfill
     SERIES = [
         "GS10", "GS2",           # Treasury yields
@@ -181,99 +181,123 @@ async def backfill_fred(start_date: date, end_date: date):
         "DFF",                   # Fed funds rate
         "UNRATE",                # Unemployment rate
     ]
-    
+
     total_observations = 0
-    
-    for series_id in SERIES:
-        try:
-            logger.info(f"  Fetching {series_id}...")
-            
-            observations = await collector.fetch_series(
-                series_id=series_id,
-                start_date=start_date,
-                end_date=end_date
-            )
-            
-            # Store to database
-            with get_db_session() as session:
-                for obs in observations:
+
+    try:
+        for series_id in SERIES:
+            try:
+                logger.info(f"  Fetching {series_id}...")
+
+                # Convert date to datetime for the collector
+                start_dt = datetime.combine(start_date, datetime.min.time())
+                end_dt = datetime.combine(end_date, datetime.min.time())
+
+                # fetch_series returns raw API response Dict
+                response = await collector.fetch_series(
+                    series_id=series_id,
+                    start_date=start_dt,
+                    end_date=end_dt
+                )
+
+                # Parse the response to get observation list
+                observations = collector.parse_series_response(response, series_id)
+
+                if not observations:
+                    logger.info(f"  {series_id}: No observations")
+                    continue
+
+                # Store to database
+                with get_db_session() as session:
                     from src.models.schemas import FREDSeries
-                    
-                    # Check if exists
-                    existing = session.query(FREDSeries).filter(
-                        FREDSeries.series_id == series_id,
-                        FREDSeries.observation_date == obs["date"]
-                    ).first()
-                    
-                    if not existing:
-                        record = FREDSeries(
-                            series_id=series_id,
-                            observation_date=obs["date"],
-                            value=float(obs["value"]) if obs["value"] != "." else None,
-                            realtime_start=obs.get("realtime_start"),
-                            realtime_end=obs.get("realtime_end"),
-                        )
-                        session.add(record)
-                
-                session.commit()
-            
-            total_observations += len(observations)
-            logger.info(f"  {series_id}: {len(observations)} observations")
-            
-        except Exception as e:
-            logger.error(f"  Error fetching {series_id}: {e}")
-    
+
+                    stored_count = 0
+                    for obs in observations:
+                        # Check if exists
+                        existing = session.query(FREDSeries).filter(
+                            FREDSeries.series_id == series_id,
+                            FREDSeries.observation_date == obs["date"]
+                        ).first()
+
+                        if not existing:
+                            record = FREDSeries(
+                                series_id=series_id,
+                                observation_date=obs["date"],
+                                value=obs["value"],
+                                realtime_start=obs.get("realtime_start"),
+                                realtime_end=obs.get("realtime_end"),
+                            )
+                            session.add(record)
+                            stored_count += 1
+
+                    session.commit()
+
+                total_observations += stored_count
+                logger.info(f"  {series_id}: {stored_count} new observations (of {len(observations)} fetched)")
+
+            except Exception as e:
+                logger.error(f"  Error fetching {series_id}: {e}")
+
+    finally:
+        await collector.close()
+
     logger.info(f"FRED backfill complete: {total_observations} observations")
     return total_observations
 
 
 async def backfill_power_grid(start_date: date, end_date: date):
-    """Backfill power grid data from all ISOs."""
+    """Backfill power grid data from all ISOs.
+
+    Note: Power grid collectors only support real-time data fetching.
+    Historical backfill fetches current snapshots - for true historical data,
+    use ISO-specific historical data downloads.
+    """
     logger.info(f"Backfilling Power Grid from {start_date} to {end_date}")
-    
+    logger.warning("Power grid collectors only fetch real-time data. "
+                   "Fetching current snapshot for each ISO.")
+
     ISOS = ["caiso", "ercot", "pjm", "miso"]
     total_records = 0
-    
+
     for iso in ISOS:
         try:
-            logger.info(f"  Backfilling {iso.upper()}...")
+            logger.info(f"  Fetching current data for {iso.upper()}...")
             collector = get_collector(iso)
-            
-            current = start_date
-            iso_records = 0
-            
-            while current <= end_date:
-                try:
-                    # Fetch load data
-                    load_data = await collector.fetch_load(current)
-                    
+
+            try:
+                # fetch_load() takes no parameters - fetches current real-time data
+                load_data = await collector.fetch_load()
+
+                if load_data and load_data.get("load_mw"):
                     # Store to database
                     with get_db_session() as session:
-                        for record in load_data:
-                            from src.models.power_grid import GridLoad
-                            
-                            load = GridLoad(
-                                iso=iso.upper(),
-                                timestamp=record["timestamp"],
-                                load_mw=record.get("load_mw"),
-                                forecast_mw=record.get("forecast_mw"),
-                            )
-                            session.add(load)
+                        from src.models.power_grid import GridLoad
+
+                        load = GridLoad(
+                            iso_region=iso.upper(),
+                            timestamp=load_data.get("timestamp", datetime.utcnow()),
+                            load_mw=load_data.get("load_mw"),
+                            forecast_mw=load_data.get("forecast_mw"),
+                            capacity_mw=load_data.get("capacity_mw"),
+                            load_pct_of_capacity=load_data.get("load_pct_of_capacity"),
+                        )
+                        session.add(load)
                         session.commit()
-                    
-                    iso_records += len(load_data)
-                    
-                except Exception as e:
-                    logger.warning(f"    Error on {current}: {e}")
-                
-                current += timedelta(days=1)
-            
-            total_records += iso_records
-            logger.info(f"  {iso.upper()}: {iso_records} records")
-            
+
+                    total_records += 1
+                    logger.info(f"  {iso.upper()}: {load_data.get('load_mw')} MW")
+                else:
+                    logger.warning(f"  {iso.upper()}: No data returned")
+
+            except Exception as e:
+                logger.warning(f"    Error fetching {iso.upper()}: {e}")
+
+            finally:
+                await collector.close()
+
         except Exception as e:
             logger.error(f"  Error with {iso}: {e}")
-    
+
     logger.info(f"Power Grid backfill complete: {total_records} records")
     return total_records
 
@@ -281,59 +305,86 @@ async def backfill_power_grid(start_date: date, end_date: date):
 async def backfill_patents(start_date: date, end_date: date):
     """Backfill USPTO patent data."""
     logger.info(f"Backfilling USPTO Patents from {start_date} to {end_date}")
-    
+
     collector = _get_uspto_collector()
-    
-    # Get companies to backfill
+
+    # Get companies to backfill - extract values to avoid DetachedInstanceError
     with get_db_session() as session:
-        entities = session.query(Entity).filter(
+        entities_query = session.query(Entity).filter(
             Entity.entity_type == "company"
         ).all()
-    
+        # Extract values while session is open to avoid DetachedInstanceError
+        entities = [
+            {"id": e.id, "name": e.name, "ticker": e.ticker}
+            for e in entities_query
+        ]
+
     total_patents = 0
-    
-    for entity in entities:
-        try:
-            # Search by company name
-            patents = await collector.fetch_by_assignee(
-                assignee=entity.name,
-                start_date=start_date,
-                end_date=end_date
-            )
-            
-            # Store patents
-            with get_db_session() as session:
-                for patent in patents:
-                    from src.models.patents import Patent
-                    
-                    existing = session.query(Patent).filter(
-                        Patent.patent_number == patent["patent_number"]
-                    ).first()
-                    
-                    if not existing:
-                        record = Patent(
-                            patent_number=patent["patent_number"],
-                            application_number=patent.get("application_number"),
-                            title=patent.get("title"),
-                            abstract=patent.get("abstract"),
-                            assignee_name=patent.get("assignee_name"),
-                            assignee_entity_id=entity.id,
-                            grant_date=patent.get("grant_date"),
-                            application_date=patent.get("application_date"),
-                            claims_count=patent.get("claims_count"),
-                        )
-                        session.add(record)
-                
-                session.commit()
-            
-            total_patents += len(patents)
-            
-            if patents:
-                logger.info(f"  {entity.ticker}: {len(patents)} patents")
-            
-        except Exception as e:
-            logger.warning(f"  Error for {entity.name}: {e}")
-    
+
+    try:
+        for entity in entities:
+            try:
+                # Search by company name using correct method name and parameter
+                response = await collector.fetch_patents_by_assignee(
+                    assignee_name=entity["name"]
+                )
+
+                # Parse the response to get patent list
+                patents = collector.parse(response)
+
+                # Store patents
+                if patents:
+                    with get_db_session() as session:
+                        from src.models.patents import Patent, PatentAssignee
+
+                        for patent in patents:
+                            patent_num = patent.get("patent_number")
+                            if not patent_num:
+                                continue
+
+                            existing = session.query(Patent).filter(
+                                Patent.patent_number == patent_num
+                            ).first()
+
+                            if not existing:
+                                record = Patent(
+                                    patent_number=patent_num,
+                                    application_number=patent.get("application_number"),
+                                    title=patent.get("title"),
+                                    abstract=patent.get("abstract"),
+                                    grant_date=patent.get("grant_date"),
+                                    filing_date=patent.get("filing_date"),
+                                    patent_type=patent.get("patent_type"),
+                                    claims_count=patent.get("claims_count"),
+                                    primary_class=patent.get("primary_class"),
+                                    status="granted",
+                                )
+                                session.add(record)
+
+                                # Create assignee record linking to entity
+                                if patent.get("assignee_name"):
+                                    assignee = PatentAssignee(
+                                        patent_number=patent_num,
+                                        assignee_name=patent["assignee_name"],
+                                        city=patent.get("assignee_city"),
+                                        state=patent.get("assignee_state"),
+                                        country=patent.get("assignee_country"),
+                                        entity_id=entity["id"],
+                                        is_original_assignee=True,
+                                    )
+                                    session.add(assignee)
+
+                        session.commit()
+
+                    total_patents += len(patents)
+                    logger.info(f"  {entity['ticker']}: {len(patents)} patents")
+
+            except Exception as e:
+                logger.warning(f"  Error for {entity['name']}: {e}")
+
+    finally:
+        await collector.close()
+
     logger.info(f"USPTO backfill complete: {total_patents} patents")
     return total_patents
 
@@ -408,60 +459,83 @@ async def backfill_air_quality(start_date: date, end_date: date):
 async def compute_all_factors(start_date: date, end_date: date):
     """Compute all factors for date range."""
     logger.info(f"Computing factors from {start_date} to {end_date}")
-    
-    from src.transformations.factor_registry import FACTOR_REGISTRY, compute_factor
-    
-    # Get entities
+
+    from src.transformations.base import FactorRegistry
+
+    # Get all registered factors
+    all_factors = FactorRegistry.get_all()
+
+    if not all_factors:
+        logger.warning("No factors registered in FactorRegistry")
+        return 0
+
+    logger.info(f"  Found {len(all_factors)} registered factors")
+
+    # Get entities - extract values to avoid DetachedInstanceError
     with get_db_session() as session:
-        entities = session.query(Entity).filter(
+        entities_query = session.query(Entity).filter(
             Entity.is_active == True
         ).all()
-    
+        entities = [
+            {"id": e.id, "entity_type": e.entity_type, "ticker": e.ticker}
+            for e in entities_query
+        ]
+
     total_computed = 0
-    
+
     current = start_date
     while current <= end_date:
+        current_dt = datetime.combine(current, datetime.min.time())
+
         for entity in entities:
-            for factor_id, spec in FACTOR_REGISTRY.items():
-                # Skip if entity type doesn't match
-                if spec.entity_type != "market" and spec.entity_type != entity.entity_type:
+            for factor_name, factor_class in all_factors.items():
+                # Get factor metadata
+                factor_instance = factor_class()
+                factor_entity_type = getattr(factor_instance, 'ENTITY_TYPE', 'company')
+
+                # Skip if entity type doesn't match (unless factor is market-level)
+                if factor_entity_type != "market" and factor_entity_type != entity["entity_type"]:
                     continue
-                
+
                 try:
                     with get_db_session() as session:
                         # Check if already computed
                         existing = session.query(Factor).filter(
-                            Factor.factor_name == factor_id,
-                            Factor.entity_id == entity.id,
-                            Factor.effective_date == current
+                            Factor.factor_name == factor_name,
+                            Factor.entity_id == entity["id"],
+                            Factor.effective_date == current_dt
                         ).first()
-                        
+
                         if not existing:
-                            value = compute_factor(factor_id, entity.id, current, session)
-                            
+                            # Compute the factor
+                            value = factor_instance.compute(
+                                entity_id=entity["id"],
+                                as_of_date=current_dt
+                            )
+
                             if value is not None:
                                 factor = Factor(
-                                    factor_name=factor_id,
-                                    entity_id=entity.id,
-                                    entity_type=entity.entity_type,
+                                    factor_name=factor_name,
+                                    entity_id=entity["id"],
+                                    entity_type=entity["entity_type"],
                                     value=value,
-                                    effective_date=current,
+                                    effective_date=current_dt,
                                     computed_at=datetime.utcnow(),
                                     version=1
                                 )
                                 session.add(factor)
                                 session.commit()
                                 total_computed += 1
-                
+
                 except Exception as e:
-                    logger.debug(f"  Could not compute {factor_id} for {entity.id} on {current}: {e}")
-        
+                    logger.debug(f"  Could not compute {factor_name} for {entity['id']} on {current}: {e}")
+
         current += timedelta(days=1)
-        
+
         # Progress update
         if (current - start_date).days % 7 == 0:
             logger.info(f"  Progress: {current} ({total_computed} factors computed)")
-    
+
     logger.info(f"Factor computation complete: {total_computed} factors")
     return total_computed
 
