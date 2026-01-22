@@ -1,21 +1,24 @@
 # Alternative Data Platform
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-200%2B-green.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive alternative data platform that aggregates free and low-cost data sources, transforms raw data into actionable quantitative factors, and delivers signals to institutional investors.
+**Status:** Phase 2 Complete | 200+ tests | 80+ factors
+
+A platform that aggregates free alternative data (SEC filings, flight tracking, economic indicators, weather, sentiment, shipping, satellites) and computes quantitative factors for backtesting trading strategies.
 
 ## 🎯 Overview
 
-This platform collects data from 15+ alternative data categories across 50+ sources, computes 200+ pre-built factors, and provides multiple access channels (REST API, Python SDK, Excel plugin).
+This platform collects data from 12+ alternative data sources, computes 80+ quantitative factors, and serves them via REST API.
 
-### Key Value Propositions
+### Key Features
 
-- **Breadth**: Coverage across transportation, regulatory, environmental, energy, and macroeconomic data
-- **Depth**: 200+ pre-computed factors with full transformation transparency
-- **Ease of Use**: Unified API, web dashboard, and SDKs
-- **Unique Data**: Novel factor combinations from under-exploited free sources
+- **12+ Data Sources**: SEC EDGAR, FRED, ADS-B, Power Grid, USPTO, OpenAQ, Weather, Google Trends, Reddit, Shipping, GitHub, Satellite
+- **80+ Factors**: Pre-computed quantitative signals across multiple categories
+- **REST API**: FastAPI-powered endpoints with authentication
 - **Point-in-Time**: All data stored with publication timestamps to prevent look-ahead bias
+- **Backfill**: 6+ months of historical data available
 
 ## 📊 Data Sources
 
@@ -88,14 +91,14 @@ This platform collects data from 15+ alternative data categories across 50+ sour
 - Python 3.11+
 - PostgreSQL 15+ with TimescaleDB extension
 - Redis 7+
-- Node.js 18+ (for dashboard)
+- Docker (recommended)
 
 ### Installation
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/altdata-platform.git
-cd altdata-platform
+git clone https://github.com/KTMAnimations/alternative-data.git
+cd alternative-data/altdata-platform
 
 # Create virtual environment
 python -m venv venv
@@ -120,9 +123,6 @@ python -m src.collectors.run_all
 
 # Start API server
 uvicorn src.api.main:app --reload
-
-# Start dashboard (separate terminal)
-cd dashboard && npm install && npm run dev
 ```
 
 ### Verify Installation
@@ -143,87 +143,53 @@ curl http://localhost:8000/api/v1/factors/insider_momentum?ticker=AAPL
 ```
 altdata-platform/
 ├── README.md
+├── PRD.md                    # Project requirements (source of truth)
 ├── ARCHITECTURE.md
 ├── DEVELOPMENT.md
 ├── DATA_SOURCES.md
-├── IMPLEMENTATION_PROMPT.md
+├── DEPLOYMENT.md
 ├── requirements.txt
-├── .env.example
-├── config/
-│   ├── settings.py
-│   └── logging.yaml
+├── docker-compose.yml
 ├── src/
 │   ├── __init__.py
-│   ├── collectors/
-│   │   ├── __init__.py
-│   │   ├── base.py
-│   │   ├── sec_edgar.py
-│   │   ├── adsb_exchange.py
-│   │   ├── fred.py
-│   │   └── ...
-│   ├── transformations/
-│   │   ├── __init__.py
-│   │   ├── factors/
-│   │   │   ├── sec_factors.py
-│   │   │   ├── aviation_factors.py
-│   │   │   └── macro_factors.py
-│   │   └── entity_resolution.py
-│   ├── api/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── routes/
-│   │   └── middleware/
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py
+│   ├── config/               # Settings and configuration
+│   ├── collectors/           # Data source collectors
+│   ├── transformations/      # Factor computations
+│   │   └── factors/
+│   ├── api/                  # FastAPI endpoints
+│   ├── models/               # SQLAlchemy models
 │   └── utils/
-│       ├── __init__.py
-│       └── helpers.py
-├── tests/
-│   ├── __init__.py
-│   ├── test_collectors/
-│   ├── test_transformations/
-│   └── test_api/
+├── tests/                    # 200+ tests
 ├── scripts/
 │   ├── init_db.py
 │   └── backfill.py
-├── dashboard/
-│   └── (React app)
-└── docs/
-    └── (Additional documentation)
+└── dags/                     # Airflow DAGs
 ```
 
-## 📈 Sample Factor Query
+## 📈 Sample API Queries
 
-```python
-from altdata import AltDataClient
+```bash
+# List all factors
+curl http://localhost:8000/api/v1/factors
 
-client = AltDataClient(api_key="your-key")
+# Get factor values for an entity
+curl "http://localhost:8000/api/v1/factors/insider_transaction_momentum?entity_id=AAPL&start_date=2024-01-01"
 
-# Get insider trading momentum for AAPL
-factor = client.get_factor(
-    name="insider_transaction_momentum",
-    ticker="AAPL",
-    start_date="2024-01-01",
-    end_date="2024-12-31"
-)
+# List entities
+curl http://localhost:8000/api/v1/entities
 
-# Get multiple factors
-factors = client.get_factors(
-    names=["insider_momentum", "8k_event_velocity", "filing_delay_score"],
-    ticker="TSLA",
-    start_date="2024-01-01"
-)
+# Check data source status
+curl http://localhost:8000/api/v1/sources/status
 ```
 
 ## 🗺️ Roadmap
 
-| Phase | Duration | Focus | Status |
-|-------|----------|-------|--------|
-| MVP | 8 weeks | Core infrastructure + SEC, ADS-B, FRED | 🚧 In Progress |
-| Phase 1 | 6 weeks | Complete Tier 1 sources | ⏳ Planned |
-| Phase 2 | 8 weeks | Tier 2 sources + Python SDK | ⏳ Planned |
-| Phase 3 | 6 weeks | Scale + Excel/R plugins | ⏳ Planned |
+| Phase | Focus | Status |
+|-------|-------|--------|
+| MVP | SEC EDGAR + FRED collectors, basic API | ✅ Complete |
+| Phase 1 | +ADS-B, Power Grid, USPTO, OpenAQ | ✅ Complete |
+| Phase 2 | +Weather, Trends, Reddit, Shipping, GitHub, Satellite | ✅ Complete |
+| Phase 3 | Dashboard, Python SDK, AWS Deployment | ⏳ Next |
 
 ## 🤝 Contributing
 

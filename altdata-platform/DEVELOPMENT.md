@@ -8,7 +8,6 @@ This document covers setting up your development environment, coding standards, 
 - Python 3.11 or higher
 - PostgreSQL 15+ with TimescaleDB extension
 - Redis 7+
-- Node.js 18+ (for dashboard)
 - Docker & Docker Compose (recommended)
 - Git
 
@@ -148,28 +147,26 @@ python -m src.collectors.sec_edgar
 airflow standalone  # Development mode
 ```
 
-### Start Dashboard
-```bash
-cd dashboard
-npm install
-npm run dev
-```
-
 ## Testing
 
 ### Test Structure
 ```
 tests/
-├── conftest.py           # Shared fixtures
-├── unit/                 # Unit tests
-│   ├── test_collectors/
-│   ├── test_transformations/
-│   └── test_api/
-├── integration/          # Integration tests
-│   ├── test_database.py
-│   └── test_api_endpoints.py
-└── e2e/                  # End-to-end tests
-    └── test_factor_pipeline.py
+├── conftest.py              # Shared fixtures
+├── test_api.py              # API endpoint tests
+├── test_sec_edgar.py        # SEC collector tests
+├── test_fred.py             # FRED collector tests
+├── test_adsb_collector.py   # Aviation tests
+├── test_power_grid.py       # Energy tests
+├── test_uspto.py            # Patent tests
+├── test_openaq.py           # Air quality tests
+├── test_weather.py          # Weather tests
+├── test_google_trends.py    # Trends tests
+├── test_reddit_sentiment.py # Sentiment tests
+├── test_shipping.py         # Shipping tests
+├── test_github.py           # GitHub tests
+├── test_satellite.py        # Satellite tests
+└── ...                      # 200+ total tests
 ```
 
 ### Running Tests
@@ -181,13 +178,13 @@ pytest
 pytest --cov=src --cov-report=html
 
 # Run specific test file
-pytest tests/unit/test_collectors/test_sec_edgar.py
+pytest tests/test_sec_edgar.py
 
 # Run tests matching pattern
 pytest -k "test_insider"
 
-# Run only unit tests
-pytest tests/unit/
+# Run tests for a specific collector
+pytest tests/test_weather.py tests/test_shipping.py
 
 # Run with verbose output
 pytest -v
@@ -198,7 +195,7 @@ pytest -x
 
 ### Writing Tests
 ```python
-# tests/unit/test_collectors/test_sec_edgar.py
+# tests/test_sec_edgar.py
 import pytest
 from unittest.mock import Mock, patch
 from src.collectors.sec_edgar import SECEdgarCollector
@@ -433,11 +430,11 @@ class NewSourceCollector(BaseCollector):
 
 ### 2. Create Tests
 ```python
-# tests/unit/test_collectors/test_new_source.py
+# tests/test_new_source.py
 class TestNewSourceCollector:
     def test_fetch_success(self):
         pass
-    
+
     def test_parse_valid_data(self):
         pass
 ```
