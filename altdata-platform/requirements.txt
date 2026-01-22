@@ -1,0 +1,138 @@
+# Alternative Data Platform - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ===========================================
+# CORE FRAMEWORK
+# ===========================================
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# ===========================================
+# DATABASE
+# ===========================================
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+alembic>=1.12.0
+asyncpg>=0.29.0  # Async PostgreSQL
+
+# ===========================================
+# CACHING & QUEUES
+# ===========================================
+redis>=5.0.0
+aioredis>=2.0.0
+
+# ===========================================
+# HTTP CLIENTS
+# ===========================================
+httpx>=0.25.0
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# ===========================================
+# DATA PROCESSING
+# ===========================================
+pandas>=2.1.0
+numpy>=1.26.0
+polars>=0.19.0  # Fast DataFrame alternative
+
+# ===========================================
+# NLP & TEXT PROCESSING
+# ===========================================
+spacy>=3.7.0
+transformers>=4.35.0
+torch>=2.1.0
+nltk>=3.8.0
+
+# ===========================================
+# XML & HTML PARSING
+# ===========================================
+lxml>=4.9.0
+beautifulsoup4>=4.12.0
+
+# ===========================================
+# DATE & TIME
+# ===========================================
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# ===========================================
+# CONFIGURATION
+# ===========================================
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# ===========================================
+# SCHEDULING (For collectors)
+# ===========================================
+apscheduler>=3.10.0
+# apache-airflow>=2.7.0  # For production orchestration
+
+# ===========================================
+# CLOUD STORAGE
+# ===========================================
+boto3>=1.33.0  # AWS S3
+# google-cloud-storage>=2.13.0  # GCS
+
+# ===========================================
+# SECURITY
+# ===========================================
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.0
+cryptography>=41.0.0
+
+# ===========================================
+# MONITORING & LOGGING
+# ===========================================
+structlog>=23.2.0
+python-json-logger>=2.0.0
+# sentry-sdk>=1.35.0  # Error tracking
+
+# ===========================================
+# TESTING
+# ===========================================
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+httpx>=0.25.0  # For FastAPI testing
+factory-boy>=3.3.0  # Test data factories
+faker>=20.0.0  # Fake data generation
+
+# ===========================================
+# CODE QUALITY
+# ===========================================
+black>=23.11.0
+isort>=5.12.0
+flake8>=6.1.0
+mypy>=1.7.0
+pre-commit>=3.6.0
+
+# ===========================================
+# TYPE STUBS
+# ===========================================
+types-requests>=2.31.0
+types-redis>=4.6.0
+pandas-stubs>=2.1.0
+
+# ===========================================
+# FINANCIAL SPECIFIC
+# ===========================================
+yfinance>=0.2.0  # Yahoo Finance (reference data)
+# fredapi>=0.5.0  # FRED API wrapper (optional)
+
+# ===========================================
+# UTILITIES
+# ===========================================
+tenacity>=8.2.0  # Retry logic
+tqdm>=4.66.0  # Progress bars
+click>=8.1.0  # CLI
+rich>=13.7.0  # Rich console output
+orjson>=3.9.0  # Fast JSON
+
+# ===========================================
+# GEOSPATIAL (For ADS-B, shipping)
+# ===========================================
+geopy>=2.4.0  # Geocoding
+haversine>=2.8.0  # Distance calculations
