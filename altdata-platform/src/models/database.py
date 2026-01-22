@@ -84,12 +84,16 @@ def check_database_connection() -> bool:
 
 def init_db() -> None:
     """Initialize database tables.
-    
+
     Creates all tables defined in models.
     """
     # Import all models to ensure they're registered
     from src.models import schemas  # noqa: F401
-    
+    from src.models import adsb  # noqa: F401
+    from src.models import power_grid  # noqa: F401
+    from src.models import patents  # noqa: F401
+    from src.models import air_quality  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
 
 

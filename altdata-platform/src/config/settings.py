@@ -48,7 +48,9 @@ class Settings(BaseSettings):
     sec_edgar_user_agent: str = Field(default="AltData Platform contact@example.com")
     fred_api_key: Optional[str] = Field(default=None)
     adsb_exchange_api_key: Optional[str] = Field(default=None)
+    adsb_exchange_rapidapi_key: Optional[str] = Field(default=None)
     openaq_api_key: Optional[str] = Field(default=None)
+    uspto_api_key: Optional[str] = Field(default=None)
     
     # Collector settings
     sec_edgar_interval: int = Field(default=300)  # 5 minutes

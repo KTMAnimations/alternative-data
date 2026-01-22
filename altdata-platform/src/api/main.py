@@ -16,11 +16,35 @@ from src.transformations.base import FactorRegistry
 
 # Import factors to register them
 from src.transformations.factors import (
+    # SEC factors
     InsiderTransactionMomentum,
     InsiderClusteringScore,
     EventVelocity8K,
+    # Macro factors
     YieldCurveSlope,
     CreditSpreadIndex,
+    # Aviation factors
+    ExecutiveFlightFrequency,
+    HQVisitScore,
+    UnusualDestinationAlert,
+    MultiCompanyColocation,
+    # Power grid factors
+    GridLoadSurprise,
+    RegionalPowerDemand,
+    RenewableShare,
+    LoadCapacityRatio,
+    YoYDemandChange,
+    # Patent factors
+    PatentMomentum,
+    InnovationVelocity,
+    PatentQualityScore,
+    TechnologyDiversity,
+    TimeToGrant,
+    # Air quality factors
+    AirQualityAnomaly,
+    IndustrialActivityProxy,
+    PollutionTrend,
+    RegionalAQI,
 )
 
 # ===========================================
@@ -387,6 +411,7 @@ async def list_sources(api_key: str = Depends(verify_api_key)):
                 "category": "regulatory",
                 "status": "active",
                 "update_frequency": "real-time",
+                "factors": ["insider_transaction_momentum", "insider_clustering_score", "8k_event_velocity"],
             },
             {
                 "id": "fred",
@@ -394,14 +419,60 @@ async def list_sources(api_key: str = Depends(verify_api_key)):
                 "category": "macroeconomic",
                 "status": "active",
                 "update_frequency": "daily",
+                "factors": ["yield_curve_slope", "credit_spread_index", "financial_conditions_index"],
             },
             {
                 "id": "adsb_exchange",
                 "name": "ADS-B Exchange",
                 "category": "aviation",
-                "status": "planned",
+                "status": "active",
                 "update_frequency": "real-time",
+                "factors": ["executive_flight_frequency", "hq_visit_score", "unusual_destination_alert", "multi_company_colocation"],
             },
+            {
+                "id": "power_grid",
+                "name": "US Power Grid ISOs",
+                "category": "industrial",
+                "status": "active",
+                "update_frequency": "hourly",
+                "factors": ["grid_load_surprise", "regional_power_demand", "renewable_share", "load_capacity_ratio"],
+            },
+            {
+                "id": "uspto",
+                "name": "USPTO Patents",
+                "category": "innovation",
+                "status": "active",
+                "update_frequency": "daily",
+                "factors": ["patent_momentum", "innovation_velocity", "patent_quality_score", "technology_diversity"],
+            },
+            {
+                "id": "openaq",
+                "name": "OpenAQ",
+                "category": "environmental",
+                "status": "active",
+                "update_frequency": "hourly",
+                "factors": ["air_quality_anomaly", "industrial_activity_proxy", "pollution_trend", "regional_aqi"],
+            },
+        ]
+    }
+
+
+@app.get("/api/v1/categories", tags=["Factors"])
+async def list_categories(api_key: str = Depends(verify_api_key)):
+    """List all factor categories."""
+    all_factors = FactorRegistry.list_factors()
+    categories = {}
+
+    for f in all_factors:
+        cat = f["category"]
+        if cat not in categories:
+            categories[cat] = {"name": cat.replace("_", " ").title(), "count": 0, "factors": []}
+        categories[cat]["count"] += 1
+        categories[cat]["factors"].append(f["id"])
+
+    return {
+        "categories": [
+            {"id": k, **v} for k, v in sorted(categories.items())
         ]
     }
 
