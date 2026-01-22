@@ -111,56 +111,71 @@ def _get_openaq_collector():
 # ===========================================
 
 async def backfill_sec_edgar(start_date: date, end_date: date):
-    """Backfill SEC EDGAR filings and Form 4 data."""
-    logger.info(f"Backfilling SEC EDGAR from {start_date} to {end_date}")
-    
+    """Backfill SEC EDGAR filings and Form 4 data.
+
+    Note: SEC RSS feeds only provide recent filings (typically last 24-48 hours).
+    Historical backfilling would require bulk data downloads from SEC.
+    This function fetches recent Form 4s and filters to tracked entities.
+    """
+    logger.info(f"Backfilling SEC EDGAR (fetching recent Form 4s)")
+    logger.info(f"  Note: SEC RSS only provides recent filings, not historical data")
+
     collector = _get_sec_collector()
-    
+
     # Get list of entities to backfill
     with get_db_session() as session:
         entities = session.query(Entity).filter(
             Entity.cik.isnot(None)
         ).all()
-        ciks = [e.cik for e in entities]
-    
-    logger.info(f"Backfilling for {len(ciks)} companies")
-    
-    current = start_date
-    total_filings = 0
-    
-    while current <= end_date:
-        try:
-            # Fetch filings for this date
-            filings = await collector.fetch_filings_by_date(current)
-            
-            # Filter to our companies
-            relevant = [f for f in filings if f.get("cik") in ciks]
-            
-            if relevant:
-                # Store raw data
-                await collector.store_raw(relevant, data_timestamp=datetime.combine(current, datetime.min.time()))
-                
-                # Parse and store
-                for filing in relevant:
-                    if filing.get("form_type") == "4":
-                        parsed = collector.parse_form4(filing)
-                        # Store to database
-                        await store_form4_transaction(parsed)
-                
-                total_filings += len(relevant)
-                logger.info(f"  {current}: {len(relevant)} filings")
-            
-        except Exception as e:
-            logger.error(f"  Error on {current}: {e}")
-        
-        current += timedelta(days=1)
-        
-        # Progress update every 30 days
-        if (current - start_date).days % 30 == 0:
-            logger.info(f"  Progress: {current} ({total_filings} total filings)")
-    
-    logger.info(f"SEC EDGAR backfill complete: {total_filings} filings")
-    return total_filings
+        entity_ciks = {e.cik.lstrip("0"): e.id for e in entities}
+
+    logger.info(f"  Tracking {len(entity_ciks)} companies")
+
+    total_stored = 0
+    try:
+        async with collector:
+            # Fetch recent Form 4s (SEC RSS only has recent filings)
+            filings = await collector.fetch_recent_form4s(limit=100)
+
+            logger.info(f"  Fetched {len(filings)} recent Form 4 filings")
+
+            for filing in filings:
+                try:
+                    # Get CIK from filing
+                    issuer = filing.get("issuer", {})
+                    cik = issuer.get("cik", "").lstrip("0")
+
+                    # Check if this is a tracked entity
+                    if cik not in entity_ciks:
+                        continue
+
+                    entity_id = entity_ciks[cik]
+
+                    # Store transactions
+                    transactions = filing.get("transactions", [])
+                    for txn in transactions:
+                        await store_form4_transaction({
+                            "entity_id": entity_id,
+                            "cik": cik,
+                            "insider_name": filing.get("reporting_owner", {}).get("name"),
+                            "insider_title": filing.get("reporting_owner", {}).get("relationship", {}).get("officer_title"),
+                            "transaction_date": txn.get("transaction_date"),
+                            "transaction_type": txn.get("transaction_code"),
+                            "shares": txn.get("shares"),
+                            "price_per_share": txn.get("price_per_share"),
+                            "shares_owned_after": txn.get("shares_owned_following"),
+                        })
+                        total_stored += 1
+
+                except Exception as e:
+                    logger.warning(f"  Error processing filing: {e}")
+                    continue
+
+    except Exception as e:
+        logger.error(f"SEC EDGAR backfill error: {e}")
+
+    logger.info(f"SEC EDGAR backfill complete: {total_stored} transactions stored")
+    return total_stored
 
 
 async def backfill_fred(start_date: date, end_date: date):
@@ -461,6 +476,14 @@ async def compute_all_factors(start_date: date, end_date: date):
     logger.info(f"Computing factors from {start_date} to {end_date}")
 
     from src.transformations.base import FactorRegistry
+
+    # Import factor modules to trigger @FactorRegistry.register decorators
+    import src.transformations.factors.sec_factors  # noqa: F401
+    import src.transformations.factors.macro_factors  # noqa: F401
+    import src.transformations.factors.air_quality_factors  # noqa: F401
+    import src.transformations.factors.aviation_factors  # noqa: F401
+    import src.transformations.factors.power_grid_factors  # noqa: F401
+    import src.transformations.factors.patent_factors  # noqa: F401
 
     # Get all registered factors
     all_factors = FactorRegistry.get_all()
