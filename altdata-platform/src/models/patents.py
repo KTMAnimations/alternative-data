@@ -129,3 +129,26 @@ class PatentApplication(Base):
         Index("ix_app_entity", "entity_id"),
         Index("ix_app_filing", "filing_date"),
     )
+
+
+class PatentCPC(Base):
+    """Cooperative Patent Classification codes for patents.
+
+    CPC is the international patent classification system.
+    Each patent can have multiple CPC codes.
+    """
+    __tablename__ = "patent_cpc"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    patent_number = Column(String(20), nullable=False, index=True)
+    cpc_code = Column(String(20), nullable=False, index=True)
+    cpc_section = Column(String(5))  # A-H, Y
+    cpc_class = Column(String(10))
+    cpc_subclass = Column(String(10))
+    is_primary = Column(Boolean, default=False)
+
+    __table_args__ = (
+        Index("ix_patent_cpc_patent", "patent_number"),
+        Index("ix_patent_cpc_code", "cpc_code"),
+        Index("ix_patent_cpc_section", "cpc_section"),
+    )

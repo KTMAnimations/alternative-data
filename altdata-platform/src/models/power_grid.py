@@ -127,3 +127,7 @@ class GridForecast(Base):
         Index("ix_forecast_iso_target", "iso_region", "target_timestamp"),
         Index("ix_forecast_type", "forecast_type"),
     )
+
+
+# Alias for Phase 1 naming compatibility
+GridGeneration = GenerationMix

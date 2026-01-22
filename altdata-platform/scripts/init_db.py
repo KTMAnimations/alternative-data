@@ -19,6 +19,70 @@ def create_tables():
     print("Tables created successfully!")
 
 
+def create_hypertables():
+    """Create TimescaleDB hypertables for time-series tables.
+
+    This must be called AFTER create_tables() since the tables must exist first.
+    """
+    print("Creating TimescaleDB hypertables...")
+
+    # Tables that should be hypertables with their time column
+    hypertable_configs = [
+        ("factors", "effective_date"),
+        ("flight_positions", "timestamp"),
+        ("grid_load", "timestamp"),
+        ("grid_prices", "timestamp"),
+        ("generation_mix", "timestamp"),
+        ("air_quality_measurements", "timestamp"),
+    ]
+
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        # Check if TimescaleDB is available
+        try:
+            result = conn.execute(text("SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'"))
+            row = result.fetchone()
+            if not row:
+                print("  TimescaleDB extension not installed, skipping hypertables")
+                return
+            print(f"  TimescaleDB version: {row[0]}")
+        except Exception as e:
+            print(f"  TimescaleDB not available: {e}")
+            return
+
+        for table_name, time_column in hypertable_configs:
+            try:
+                # Check if table exists
+                result = conn.execute(text(
+                    f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{table_name}')"
+                ))
+                if not result.fetchone()[0]:
+                    print(f"  Table '{table_name}' does not exist, skipping")
+                    continue
+
+                # Check if already a hypertable
+                result = conn.execute(text(
+                    f"SELECT EXISTS (SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = '{table_name}')"
+                ))
+                if result.fetchone()[0]:
+                    print(f"  '{table_name}' is already a hypertable")
+                    continue
+
+                # Create hypertable
+                conn.execute(text(
+                    f"SELECT create_hypertable('{table_name}', '{time_column}', if_not_exists => TRUE, migrate_data => TRUE)"
+                ))
+                conn.commit()
+                print(f"  Created hypertable: {table_name} (partitioned by {time_column})")
+
+            except Exception as e:
+                print(f"  Warning: Could not create hypertable for '{table_name}': {e}")
+                conn.rollback()
+
+    print("Hypertable creation complete!")
+
+
 def seed_entities():
     """Seed sample entities."""
     print("Seeding sample entities...")
@@ -180,15 +244,16 @@ def main():
     """Run database initialization."""
     print(f"Initializing database: {settings.database_url}")
     print("-" * 50)
-    
+
     try:
         create_tables()
+        create_hypertables()
         seed_entities()
         seed_factor_definitions()
-        
+
         print("-" * 50)
         print("Database initialization complete!")
-        
+
     except Exception as e:
         print(f"Error initializing database: {e}")
         sys.exit(1)

@@ -47,6 +47,33 @@ class AirQualityMeasurement(Base):
     averaging_period = Column(String(20))  # hour, day
     raw_data_id = Column(BigInteger)
 
+    # Note: aqi column is computed via API, not stored
+    # The property below provides a computed AQI value
+    @property
+    def aqi(self) -> int:
+        """Calculate AQI from value (simplified calculation)."""
+        if self.parameter == "pm25" and self.value:
+            if self.value <= 12:
+                return int(self.value * 50 / 12)
+            elif self.value <= 35.4:
+                return int(50 + (self.value - 12) * 50 / 23.4)
+            elif self.value <= 55.4:
+                return int(100 + (self.value - 35.4) * 50 / 20)
+            else:
+                return int(150 + (self.value - 55.4) * 50 / 94.6)
+        return None
+
+    # Relationship to location
+    @property
+    def location(self):
+        """Get the associated location (lazy load)."""
+        from src.models.database import SessionLocal
+        session = SessionLocal()
+        try:
+            return session.query(AirQualityLocation).filter_by(location_id=self.location_id).first()
+        finally:
+            session.close()
+
     __table_args__ = (
         Index("ix_aq_measure_loc_time", "location_id", "timestamp"),
         Index("ix_aq_measure_param", "parameter"),
@@ -93,3 +120,7 @@ class IndustrialZone(Base):
     __table_args__ = (
         Index("ix_ind_zone_location", "latitude", "longitude"),
     )
+
+
+# Alias for Phase 1 naming compatibility
+AirQualityReading = AirQualityMeasurement

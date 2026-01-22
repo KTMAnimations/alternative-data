@@ -1,6 +1,6 @@
 """FastAPI application for the Alternative Data Platform."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List, Optional
 
 import redis
@@ -8,10 +8,15 @@ from fastapi import FastAPI, HTTPException, Depends, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from src.config.settings import settings
 from src.models.database import get_db, check_database_connection, SessionLocal
 from src.models.schemas import Entity, Factor, FactorDefinition
+from src.models.adsb import Aircraft, FlightLanding
+from src.models.power_grid import GridLoad, GenerationMix
+from src.models.patents import Patent, PatentAssignee
+from src.models.air_quality import AirQualityMeasurement, AirQualityLocation
 from src.transformations.base import FactorRegistry
 
 # Import factors to register them
@@ -142,6 +147,78 @@ class EntityListResponse(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None
+
+
+# Phase 1 Stage 6 Schemas
+class FlightRecord(BaseModel):
+    icao_hex: str
+    registration: Optional[str]
+    landing_timestamp: datetime
+    airport_icao: Optional[str]
+    airport_name: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    nearest_company_hq: Optional[str]
+    distance_to_hq_km: Optional[float]
+
+
+class FlightListResponse(BaseModel):
+    company_id: str
+    flights: List[FlightRecord]
+    total: int
+
+
+class GridLoadRecord(BaseModel):
+    iso_region: str
+    timestamp: datetime
+    load_mw: Optional[float]
+    forecast_mw: Optional[float]
+    capacity_mw: Optional[float]
+    load_pct_of_capacity: Optional[float]
+
+
+class GridLoadResponse(BaseModel):
+    iso: str
+    date: date
+    readings: List[GridLoadRecord]
+    total: int
+
+
+class PatentRecord(BaseModel):
+    patent_number: str
+    application_number: Optional[str]
+    title: Optional[str]
+    filing_date: Optional[date]
+    grant_date: Optional[date]
+    status: Optional[str]
+    primary_class: Optional[str]
+    claims_count: Optional[int]
+
+
+class PatentListResponse(BaseModel):
+    company_id: str
+    patents: List[PatentRecord]
+    total: int
+
+
+class AirQualityRecord(BaseModel):
+    location_id: Optional[str]
+    location_name: Optional[str]
+    city: Optional[str]
+    country: Optional[str]
+    timestamp: datetime
+    parameter: str
+    value: Optional[float]
+    unit: Optional[str]
+    aqi: Optional[int]
+
+
+class AirQualityResponse(BaseModel):
+    city: Optional[str]
+    country: Optional[str]
+    date: date
+    readings: List[AirQualityRecord]
+    total: int
 
 
 # ===========================================
@@ -475,6 +552,222 @@ async def list_categories(api_key: str = Depends(verify_api_key)):
             {"id": k, **v} for k, v in sorted(categories.items())
         ]
     }
+
+
+# ===========================================
+# PHASE 1 STAGE 6 ENDPOINTS
+# ===========================================
+
+@app.get("/api/v1/aviation/flights", response_model=FlightListResponse, tags=["Aviation"])
+async def get_corporate_flights(
+    company_id: str = Query(..., description="Company entity ID"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get corporate jet flight history for a company."""
+    session = SessionLocal()
+    try:
+        # Default date range
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=30)
+
+        # Query flights for company's aircraft
+        query = (
+            session.query(FlightLanding)
+            .join(Aircraft, FlightLanding.aircraft_id == Aircraft.id)
+            .filter(
+                Aircraft.company_entity_id == company_id,
+                func.date(FlightLanding.landing_timestamp) >= start_date,
+                func.date(FlightLanding.landing_timestamp) <= end_date,
+            )
+            .order_by(FlightLanding.landing_timestamp.desc())
+        )
+
+        results = query.all()
+
+        flights = [
+            FlightRecord(
+                icao_hex=f.icao_hex,
+                registration=f.aircraft.registration if f.aircraft else None,
+                landing_timestamp=f.landing_timestamp,
+                airport_icao=f.airport_icao,
+                airport_name=f.airport_name,
+                latitude=f.latitude,
+                longitude=f.longitude,
+                nearest_company_hq=f.nearest_company_hq,
+                distance_to_hq_km=f.distance_to_hq_km,
+            )
+            for f in results
+        ]
+
+        return FlightListResponse(
+            company_id=company_id,
+            flights=flights,
+            total=len(flights),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/energy/load", response_model=GridLoadResponse, tags=["Energy"])
+async def get_grid_load(
+    iso: str = Query(..., description="ISO region", enum=["CAISO", "ERCOT", "PJM", "MISO"]),
+    query_date: date = Query(..., alias="date", description="Date to query"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get electricity load data for an ISO region."""
+    session = SessionLocal()
+    try:
+        # Query grid load for the specified date
+        query = (
+            session.query(GridLoad)
+            .filter(
+                GridLoad.iso_region == iso,
+                func.date(GridLoad.timestamp) == query_date,
+            )
+            .order_by(GridLoad.timestamp)
+        )
+
+        results = query.all()
+
+        readings = [
+            GridLoadRecord(
+                iso_region=r.iso_region,
+                timestamp=r.timestamp,
+                load_mw=r.load_mw,
+                forecast_mw=r.forecast_mw,
+                capacity_mw=r.capacity_mw,
+                load_pct_of_capacity=r.load_pct_of_capacity,
+            )
+            for r in results
+        ]
+
+        return GridLoadResponse(
+            iso=iso,
+            date=query_date,
+            readings=readings,
+            total=len(readings),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/patents/filings", response_model=PatentListResponse, tags=["Patents"])
+async def get_patent_filings(
+    company_id: str = Query(..., description="Company entity ID"),
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get patent filing history for a company."""
+    session = SessionLocal()
+    try:
+        # Default date range
+        if not end_date:
+            end_date = date.today()
+        if not start_date:
+            start_date = end_date - timedelta(days=365)  # Last year by default
+
+        # Query patents for company
+        query = (
+            session.query(Patent)
+            .join(PatentAssignee, Patent.patent_number == PatentAssignee.patent_number)
+            .filter(
+                PatentAssignee.entity_id == company_id,
+            )
+        )
+
+        # Filter by grant date or filing date
+        query = query.filter(
+            ((Patent.grant_date >= start_date) & (Patent.grant_date <= end_date)) |
+            ((Patent.filing_date >= start_date) & (Patent.filing_date <= end_date))
+        )
+
+        query = query.order_by(Patent.grant_date.desc().nullslast())
+
+        results = query.all()
+
+        patents = [
+            PatentRecord(
+                patent_number=p.patent_number,
+                application_number=p.application_number,
+                title=p.title,
+                filing_date=p.filing_date,
+                grant_date=p.grant_date,
+                status=p.status,
+                primary_class=p.primary_class,
+                claims_count=p.claims_count,
+            )
+            for p in results
+        ]
+
+        return PatentListResponse(
+            company_id=company_id,
+            patents=patents,
+            total=len(patents),
+        )
+    finally:
+        session.close()
+
+
+@app.get("/api/v1/environment/air-quality", response_model=AirQualityResponse, tags=["Environment"])
+async def get_air_quality(
+    query_date: date = Query(..., alias="date", description="Date to query"),
+    city: Optional[str] = Query(None, description="Filter by city"),
+    country: Optional[str] = Query(None, description="Filter by country code"),
+    parameter: Optional[str] = Query("pm25", description="Pollutant parameter"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get air quality readings."""
+    session = SessionLocal()
+    try:
+        # Build query
+        query = (
+            session.query(AirQualityMeasurement)
+            .join(AirQualityLocation, AirQualityMeasurement.location_id == AirQualityLocation.location_id)
+            .filter(
+                func.date(AirQualityMeasurement.timestamp) == query_date,
+            )
+        )
+
+        if city:
+            query = query.filter(AirQualityLocation.city.ilike(f"%{city}%"))
+        if country:
+            query = query.filter(AirQualityLocation.country == country.upper())
+        if parameter:
+            query = query.filter(AirQualityMeasurement.parameter == parameter)
+
+        query = query.order_by(AirQualityMeasurement.timestamp.desc()).limit(1000)
+
+        results = query.all()
+
+        readings = [
+            AirQualityRecord(
+                location_id=r.location_id,
+                location_name=r.location.name if r.location else None,
+                city=r.location.city if r.location else None,
+                country=r.location.country if r.location else None,
+                timestamp=r.timestamp,
+                parameter=r.parameter,
+                value=r.value,
+                unit=r.unit,
+                aqi=r.aqi,
+            )
+            for r in results
+        ]
+
+        return AirQualityResponse(
+            city=city,
+            country=country,
+            date=query_date,
+            readings=readings,
+            total=len(readings),
+        )
+    finally:
+        session.close()
 
 
 # ===========================================

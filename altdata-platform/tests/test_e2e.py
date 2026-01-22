@@ -226,6 +226,416 @@ class TestE2EPipeline:
             session.close()
 
 
+class TestPhase1E2EPipeline:
+    """End-to-end tests for Phase 1 data sources."""
+
+    def test_full_adsb_pipeline(self, client, api_key):
+        """Test complete ADS-B Exchange data pipeline.
+
+        1. Insert aircraft and flight landing data
+        2. Verify data is stored
+        3. Compute aviation factor
+        4. Query via API
+        5. Verify response
+        """
+        from src.models.database import SessionLocal
+        from src.models.adsb import Aircraft, FlightLanding
+        from src.models.schemas import Factor, Entity
+        from src.transformations.factors.aviation_factors import ExecutiveFlightFrequency
+
+        session = SessionLocal()
+        try:
+            # 1. Setup: Create entity, aircraft, and flight data
+            entity = Entity(
+                id="E2E_ADSB_TEST",
+                entity_type="company",
+                name="E2E Aviation Test Company",
+                ticker="ADSB",
+            )
+            session.add(entity)
+            session.flush()
+
+            aircraft = Aircraft(
+                icao_hex="E2ETEST",
+                registration="N12345",
+                aircraft_type="GLF6",
+                owner_name="E2E Aviation Test Company",
+                owner_type="corporate",
+                company_entity_id="E2E_ADSB_TEST",
+                is_corporate_jet=True,
+            )
+            session.add(aircraft)
+            session.flush()
+
+            # Add flight landings
+            landings = [
+                FlightLanding(
+                    icao_hex="E2ETEST",
+                    aircraft_id=aircraft.id,
+                    landing_timestamp=datetime(2024, 1, 10 + i),
+                    airport_icao=f"KSF{i}",
+                    airport_name=f"Test Airport {i}",
+                    latitude=37.7749 + i * 0.1,
+                    longitude=-122.4194 + i * 0.1,
+                )
+                for i in range(5)
+            ]
+            session.add_all(landings)
+            session.commit()
+
+            # 2. Verify raw data stored
+            stored_count = session.query(FlightLanding).filter(
+                FlightLanding.icao_hex == "E2ETEST"
+            ).count()
+            assert stored_count == 5
+
+            # 3. Compute factor
+            factor = ExecutiveFlightFrequency()
+            value = factor.compute("E2E_ADSB_TEST", as_of_date=datetime(2024, 1, 20))
+            assert value is not None
+
+            # Store the computed factor
+            stored_factor = factor.compute_and_store("E2E_ADSB_TEST", as_of_date=datetime(2024, 1, 20))
+            assert stored_factor is not None
+
+            # 4. Query via API
+            response = client.get(
+                "/api/v1/factors/executive_flight_frequency",
+                params={
+                    "entity_id": "E2E_ADSB_TEST",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+
+            # 5. Verify response
+            data = response.json()
+            assert data["factor_name"] == "executive_flight_frequency"
+            assert data["entity_id"] == "E2E_ADSB_TEST"
+
+            # Also test the new aviation flights endpoint
+            response = client.get(
+                "/api/v1/aviation/flights",
+                params={
+                    "company_id": "E2E_ADSB_TEST",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+            flights_data = response.json()
+            assert flights_data["company_id"] == "E2E_ADSB_TEST"
+            assert flights_data["total"] == 5
+
+        finally:
+            # Cleanup
+            session.query(Factor).filter_by(entity_id="E2E_ADSB_TEST").delete()
+            session.query(FlightLanding).filter(FlightLanding.icao_hex == "E2ETEST").delete()
+            session.query(Aircraft).filter_by(icao_hex="E2ETEST").delete()
+            session.query(Entity).filter_by(id="E2E_ADSB_TEST").delete()
+            session.commit()
+            session.close()
+
+    def test_full_power_grid_pipeline(self, client, api_key):
+        """Test complete Power Grid data pipeline.
+
+        1. Insert grid load data
+        2. Verify data is stored
+        3. Compute power grid factor
+        4. Query via API
+        5. Verify response
+        """
+        from src.models.database import SessionLocal
+        from src.models.power_grid import GridLoad, GenerationMix
+        from src.models.schemas import Factor
+        from src.transformations.factors.power_grid_factors import GridLoadSurprise
+
+        session = SessionLocal()
+        try:
+            # 1. Insert grid load data for CAISO
+            loads = [
+                GridLoad(
+                    iso_region="CAISO",
+                    timestamp=datetime(2024, 1, 15, hour, 0, 0),
+                    load_mw=25000 + hour * 500,
+                    forecast_mw=24500 + hour * 500,
+                    capacity_mw=50000,
+                )
+                for hour in range(24)
+            ]
+            session.add_all(loads)
+            session.commit()
+
+            # 2. Verify data stored
+            stored_count = session.query(GridLoad).filter(
+                GridLoad.iso_region == "CAISO"
+            ).count()
+            assert stored_count >= 24
+
+            # 3. Compute factor
+            factor = GridLoadSurprise()
+            value = factor.compute("CAISO", as_of_date=datetime(2024, 1, 15))
+            assert value is not None
+
+            # Store the computed factor
+            stored_factor = factor.compute_and_store("CAISO", as_of_date=datetime(2024, 1, 15))
+            assert stored_factor is not None
+
+            # 4. Query via API
+            response = client.get(
+                "/api/v1/factors/grid_load_surprise",
+                params={
+                    "entity_id": "CAISO",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+
+            # 5. Verify response
+            data = response.json()
+            assert data["factor_name"] == "grid_load_surprise"
+            assert data["entity_id"] == "CAISO"
+
+            # Also test the new energy load endpoint
+            response = client.get(
+                "/api/v1/energy/load",
+                params={
+                    "iso": "CAISO",
+                    "date": "2024-01-15",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+            load_data = response.json()
+            assert load_data["iso"] == "CAISO"
+            assert load_data["total"] == 24
+
+        finally:
+            # Cleanup
+            session.query(Factor).filter_by(entity_id="CAISO").delete()
+            session.query(GridLoad).filter(GridLoad.iso_region == "CAISO").delete()
+            session.commit()
+            session.close()
+
+    def test_full_uspto_pipeline(self, client, api_key):
+        """Test complete USPTO patent data pipeline.
+
+        1. Insert patent data
+        2. Verify data is stored
+        3. Compute patent factor
+        4. Query via API
+        5. Verify response
+        """
+        from src.models.database import SessionLocal
+        from src.models.patents import Patent, PatentAssignee
+        from src.models.schemas import Factor, Entity
+        from src.transformations.factors.patent_factors import PatentMomentum
+
+        session = SessionLocal()
+        try:
+            # 1. Setup: Create entity and patent data
+            entity = Entity(
+                id="E2E_USPTO_TEST",
+                entity_type="company",
+                name="E2E Patent Test Company",
+                ticker="PAT",
+            )
+            session.add(entity)
+            session.flush()
+
+            # Add patents
+            patents = [
+                Patent(
+                    patent_number=f"E2E-PAT-{i:04d}",
+                    application_number=f"E2E-APP-{i:04d}",
+                    title=f"Test Patent {i}",
+                    filing_date=datetime(2023, 6, 1 + i),
+                    grant_date=datetime(2024, 1, 10 + i),
+                    patent_type="utility",
+                    claims_count=10 + i,
+                    primary_class="G06N",
+                    status="granted",
+                )
+                for i in range(10)
+            ]
+            session.add_all(patents)
+            session.flush()
+
+            # Add assignees
+            assignees = [
+                PatentAssignee(
+                    patent_number=f"E2E-PAT-{i:04d}",
+                    assignee_name="E2E Patent Test Company",
+                    entity_id="E2E_USPTO_TEST",
+                    is_original_assignee=True,
+                )
+                for i in range(10)
+            ]
+            session.add_all(assignees)
+            session.commit()
+
+            # 2. Verify data stored
+            stored_count = session.query(Patent).filter(
+                Patent.patent_number.like("E2E-PAT%")
+            ).count()
+            assert stored_count == 10
+
+            # 3. Compute factor
+            factor = PatentMomentum()
+            value = factor.compute("E2E_USPTO_TEST", as_of_date=datetime(2024, 1, 20))
+            assert value is not None
+
+            # Store the computed factor
+            stored_factor = factor.compute_and_store("E2E_USPTO_TEST", as_of_date=datetime(2024, 1, 20))
+            assert stored_factor is not None
+
+            # 4. Query via API
+            response = client.get(
+                "/api/v1/factors/patent_momentum",
+                params={
+                    "entity_id": "E2E_USPTO_TEST",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+
+            # 5. Verify response
+            data = response.json()
+            assert data["factor_name"] == "patent_momentum"
+            assert data["entity_id"] == "E2E_USPTO_TEST"
+
+            # Also test the new patents endpoint
+            response = client.get(
+                "/api/v1/patents/filings",
+                params={
+                    "company_id": "E2E_USPTO_TEST",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+            patents_data = response.json()
+            assert patents_data["company_id"] == "E2E_USPTO_TEST"
+            assert patents_data["total"] == 10
+
+        finally:
+            # Cleanup
+            session.query(Factor).filter_by(entity_id="E2E_USPTO_TEST").delete()
+            session.query(PatentAssignee).filter(PatentAssignee.patent_number.like("E2E-PAT%")).delete()
+            session.query(Patent).filter(Patent.patent_number.like("E2E-PAT%")).delete()
+            session.query(Entity).filter_by(id="E2E_USPTO_TEST").delete()
+            session.commit()
+            session.close()
+
+    def test_full_openaq_pipeline(self, client, api_key):
+        """Test complete OpenAQ air quality data pipeline.
+
+        1. Insert air quality measurement data
+        2. Verify data is stored
+        3. Compute air quality factor
+        4. Query via API
+        5. Verify response
+        """
+        from src.models.database import SessionLocal
+        from src.models.air_quality import AirQualityLocation, AirQualityMeasurement
+        from src.models.schemas import Factor
+        from src.transformations.factors.air_quality_factors import AirQualityAnomaly
+
+        session = SessionLocal()
+        location_id_str = "E2E_AQ_999999"
+        try:
+            # 1. Setup: Create location and measurements
+            location = AirQualityLocation(
+                location_id=location_id_str,
+                name="E2E Test Monitor",
+                city="San Francisco",
+                country="US",
+                latitude=37.7749,
+                longitude=-122.4194,
+            )
+            session.add(location)
+            session.flush()
+
+            # Add measurements (20 days of data for anomaly calculation)
+            measurements = [
+                AirQualityMeasurement(
+                    location_id=location_id_str,
+                    timestamp=datetime(2024, 1, day, 12, 0, 0),
+                    parameter="pm25",
+                    value=15.0 + (day % 5),  # Slight variation
+                    unit="ug/m3",
+                )
+                for day in range(1, 21)
+            ]
+            session.add_all(measurements)
+            session.commit()
+
+            # 2. Verify data stored
+            stored_count = session.query(AirQualityMeasurement).filter(
+                AirQualityMeasurement.location_id == location_id_str
+            ).count()
+            assert stored_count == 20
+
+            # 3. Compute factor
+            factor = AirQualityAnomaly()
+            value = factor.compute(location_id_str, as_of_date=datetime(2024, 1, 20))
+            # Value might be None if not enough historical data, which is ok for this test
+            # The important thing is the factor computes without error
+
+            # Store the computed factor
+            stored_factor = factor.compute_and_store(location_id_str, as_of_date=datetime(2024, 1, 20))
+            # May be None if no anomaly detected
+
+            # 4. Query via API - test the factor endpoint
+            response = client.get(
+                "/api/v1/factors/air_quality_anomaly",
+                params={
+                    "entity_id": location_id_str,
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-01-31",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+
+            # 5. Verify response
+            data = response.json()
+            assert data["factor_name"] == "air_quality_anomaly"
+
+            # Also test the new air quality endpoint
+            response = client.get(
+                "/api/v1/environment/air-quality",
+                params={
+                    "date": "2024-01-15",
+                    "city": "San Francisco",
+                    "parameter": "pm25",
+                },
+                headers={"X-API-Key": api_key}
+            )
+            assert response.status_code == 200
+            aq_data = response.json()
+            assert aq_data["city"] == "San Francisco"
+            assert aq_data["total"] > 0
+
+        finally:
+            # Cleanup
+            session.query(Factor).filter_by(entity_id=location_id_str).delete()
+            session.query(AirQualityMeasurement).filter(
+                AirQualityMeasurement.location_id == location_id_str
+            ).delete()
+            session.query(AirQualityLocation).filter_by(location_id=location_id_str).delete()
+            session.commit()
+            session.close()
+
+
 class TestDataConsistency:
     """Test data consistency across the system."""
 
@@ -344,24 +754,69 @@ class TestCollectorIntegration:
 
 def test_system_components_exist():
     """Verify all system components are properly configured."""
-    # Check collectors exist
+    # Check collectors exist (MVP + Phase 1)
     from src.collectors.sec_edgar import SECEdgarCollector
     from src.collectors.fred import FREDCollector
+    from src.collectors.adsb_exchange import ADSBExchangeCollector
+    from src.collectors.power_grid import CAISOCollector, ERCOTCollector, PJMCollector, MISOCollector
+    from src.collectors.uspto import USPTOCollector
+    from src.collectors.openaq import OpenAQCollector
 
-    # Check factors are registered
+    # Check factors are registered (should have 23+ for Phase 1)
     from src.transformations.base import FactorRegistry
     factors = FactorRegistry.get_all()
-    assert len(factors) >= 5
+    assert len(factors) >= 20, f"Expected at least 20 factors, got {len(factors)}"
 
     # Check API app exists
     from src.api.main import app
     assert app is not None
 
-    # Check database models
+    # Check database models (MVP)
     from src.models.schemas import (
         Entity, Factor, RawDataCatalog,
         SECForm4Transaction, FREDSeries
     )
 
+    # Check Phase 1 database models
+    from src.models.adsb import Aircraft, FlightPosition, FlightLanding
+    from src.models.power_grid import GridLoad, GridPrice, GenerationMix
+    from src.models.patents import Patent, PatentAssignee, PatentCitation
+    from src.models.air_quality import AirQualityLocation, AirQualityMeasurement
+
     # All components are properly imported and configured
     assert True
+
+
+def test_phase1_api_endpoints_exist(client, api_key):
+    """Verify Phase 1 Stage 6 API endpoints exist."""
+    # Test aviation endpoint
+    response = client.get(
+        "/api/v1/aviation/flights",
+        params={"company_id": "TEST"},
+        headers={"X-API-Key": api_key}
+    )
+    assert response.status_code == 200
+
+    # Test energy endpoint
+    response = client.get(
+        "/api/v1/energy/load",
+        params={"iso": "CAISO", "date": "2024-01-15"},
+        headers={"X-API-Key": api_key}
+    )
+    assert response.status_code == 200
+
+    # Test patents endpoint
+    response = client.get(
+        "/api/v1/patents/filings",
+        params={"company_id": "TEST"},
+        headers={"X-API-Key": api_key}
+    )
+    assert response.status_code == 200
+
+    # Test air quality endpoint
+    response = client.get(
+        "/api/v1/environment/air-quality",
+        params={"date": "2024-01-15"},
+        headers={"X-API-Key": api_key}
+    )
+    assert response.status_code == 200
