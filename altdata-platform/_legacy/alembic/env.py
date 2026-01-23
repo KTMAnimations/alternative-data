@@ -24,6 +24,15 @@ from src.models import shipping  # noqa: F401
 from src.models import github  # noqa: F401
 from src.models import satellite  # noqa: F401
 from src.alerts import models as alert_models  # noqa: F401
+# Phase 1 Quick Wins models
+from src.models import tsa  # noqa: F401
+from src.models import opentable  # noqa: F401
+from src.models import earthquake  # noqa: F401
+from src.models import carbon_intensity  # noqa: F401
+from src.models import building_permits  # noqa: F401
+from src.models import box_office  # noqa: F401
+from src.models import cloudflare_radar  # noqa: F401
+from src.models import zillow_rental  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -15,6 +15,11 @@ os.environ["SKIP_RATE_LIMITS"] = "true"
 os.environ["API_KEY_DEFAULT"] = "test-api-key"
 os.environ["API_KEY_ADMIN"] = "admin-test-key-12345"
 
+# Import all models to ensure SQLAlchemy relationships are properly configured
+# This must happen before any model instantiation in tests
+from src.auth.models import User  # noqa: F401 - Required for APIKey relationship
+from src.models.database import Base  # noqa: F401
+
 
 @pytest.fixture(scope="session")
 def api_key() -> str:

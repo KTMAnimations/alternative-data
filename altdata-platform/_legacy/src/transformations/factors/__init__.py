@@ -105,6 +105,61 @@ from src.transformations.factors.satellite_factors import (
     NDVIAnomaly,
     RetailTrafficProxy,
 )
+from src.transformations.factors.tsa_factors import (
+    TSAThroughputMomentum,
+    TSAWeekdayWeekendRatio,
+    TSAEnplanementNowcast,
+    TSAHolidaySpike,
+    TSAThroughputVolatility,
+)
+from src.transformations.factors.opentable_factors import (
+    SeatedDinersMomentum,
+    RegionalDiningSpread,
+    RestaurantSectorHealth,
+    DiningDemandIndex,
+    InternationalDiningMomentum,
+)
+from src.transformations.factors.earthquake_factors import (
+    SeismicRiskIndex,
+    MajorEarthquakeAlert,
+    InsuranceEarthquakeExposure,
+    TaiwanSeismicRisk,
+    CaliforniaSeismicActivity,
+)
+from src.transformations.factors.carbon_intensity_factors import (
+    CarbonIntensityTrend,
+    RenewableShareGrowth,
+    GridCarbonIntensity,
+    RenewableEnergyShare,
+    LowCarbonHoursRatio,
+)
+from src.transformations.factors.building_permit_factors import (
+    PermitMomentum,
+    SingleFamilyPermitMomentum,
+    SFRMultifamilyRatio,
+    BuildingPermitLevel,
+    PermitYoYChange,
+)
+from src.transformations.factors.box_office_factors import (
+    StudioMarketShare,
+    BoxOfficeMomentum,
+    TotalBoxOffice,
+    PerTheaterAverage,
+)
+from src.transformations.factors.cloudflare_factors import (
+    TrafficAnomalyIndex,
+    SecurityThreatLevel,
+    AttackVolumeIndex,
+    InternetOutageCount,
+    TrafficVolatility,
+)
+from src.transformations.factors.zillow_factors import (
+    RentInflationIndex,
+    SFRMultifamilySpread,
+    RentMomentum,
+    NationalRentLevel,
+    RegionalRentDispersion,
+)
 
 __all__ = [
     # SEC factors (8)
@@ -200,4 +255,51 @@ __all__ = [
     "CropHealthIndex",
     "NDVIAnomaly",
     "RetailTrafficProxy",
+    # TSA factors (5)
+    "TSAThroughputMomentum",
+    "TSAWeekdayWeekendRatio",
+    "TSAEnplanementNowcast",
+    "TSAHolidaySpike",
+    "TSAThroughputVolatility",
+    # OpenTable factors (5)
+    "SeatedDinersMomentum",
+    "RegionalDiningSpread",
+    "RestaurantSectorHealth",
+    "DiningDemandIndex",
+    "InternationalDiningMomentum",
+    # Earthquake factors (5)
+    "SeismicRiskIndex",
+    "MajorEarthquakeAlert",
+    "InsuranceEarthquakeExposure",
+    "TaiwanSeismicRisk",
+    "CaliforniaSeismicActivity",
+    # Carbon intensity factors (5)
+    "CarbonIntensityTrend",
+    "RenewableShareGrowth",
+    "GridCarbonIntensity",
+    "RenewableEnergyShare",
+    "LowCarbonHoursRatio",
+    # Building permit factors (5)
+    "PermitMomentum",
+    "SingleFamilyPermitMomentum",
+    "SFRMultifamilyRatio",
+    "BuildingPermitLevel",
+    "PermitYoYChange",
+    # Box office factors (4)
+    "StudioMarketShare",
+    "BoxOfficeMomentum",
+    "TotalBoxOffice",
+    "PerTheaterAverage",
+    # Cloudflare factors (5)
+    "TrafficAnomalyIndex",
+    "SecurityThreatLevel",
+    "AttackVolumeIndex",
+    "InternetOutageCount",
+    "TrafficVolatility",
+    # Zillow rental factors (5)
+    "RentInflationIndex",
+    "SFRMultifamilySpread",
+    "RentMomentum",
+    "NationalRentLevel",
+    "RegionalRentDispersion",
 ]
