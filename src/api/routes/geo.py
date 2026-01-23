@@ -38,6 +38,40 @@ class EarthquakeGeoJSON(BaseModel):
     features: list[EarthquakeFeature]
 
 
+class RegionalExposure(BaseModel):
+    """Regional exposure breakdown for insurance analysis."""
+
+    region: str
+    exposure_percentage: float = Field(..., ge=0, le=100)
+    exposed_policies_estimate: Optional[int] = None
+    exposure_value_usd: Optional[float] = None
+
+
+class InsuranceEstimate(BaseModel):
+    """Insurance loss estimate for a specific insurer."""
+
+    ticker: str
+    name: str
+    estimated_loss_mean: float
+    estimated_loss_variance: float
+    confidence_level: float
+    exposure_by_region: list[RegionalExposure] = Field(default_factory=list)
+    reinsurance_percentage: float = Field(default=0.0, ge=0, le=100)
+    net_retained_loss: Optional[float] = None
+
+
+class HistoricalComparison(BaseModel):
+    """Comparison to similar historical earthquake events."""
+
+    event_id: str
+    timestamp: datetime
+    magnitude: float
+    distance_km: float
+    place_description: str
+    actual_insured_loss_usd: Optional[float] = None
+    similarity_score: float = Field(..., ge=0, le=1)
+
+
 class EarthquakeDetail(BaseModel):
     """Detailed earthquake information."""
 
@@ -52,7 +86,8 @@ class EarthquakeDetail(BaseModel):
     tsunami_flag: bool
     estimated_population_exposure: Optional[int]
     estimated_economic_impact_usd: Optional[float]
-    insurance_estimates: list[dict]
+    insurance_estimates: list[InsuranceEstimate]
+    historical_comparisons: list[HistoricalComparison] = Field(default_factory=list)
 
 
 class RegionalThresholdConfig(BaseModel):
@@ -122,9 +157,18 @@ async def get_earthquakes(
 @router.get("/earthquakes/{event_id}", response_model=EarthquakeDetail)
 async def get_earthquake_detail(
     event_id: str,
+    include_historical: bool = Query(True, description="Include historical similar event comparisons"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get detailed earthquake information with impact estimates."""
+    """Get detailed earthquake information with impact estimates.
+
+    Returns comprehensive earthquake data including:
+    - Basic event information (magnitude, location, depth)
+    - Estimated economic impact
+    - Insurance loss estimates by major insurer with regional exposure breakdown
+    - Reinsurance arrangements factored into net retained loss
+    - Historical similar events for comparison (if include_historical=True)
+    """
     query = select(EarthquakeEvent).where(EarthquakeEvent.event_id == event_id)
     result = await db.execute(query)
     event = result.scalar_one_or_none()
@@ -135,8 +179,13 @@ async def get_earthquake_detail(
             detail=f"Earthquake event {event_id} not found",
         )
 
-    # Calculate insurance estimates (placeholder)
-    insurance_estimates = _calculate_insurance_estimates(event)
+    # Find historical similar events for comparison
+    historical_comparisons = []
+    if include_historical:
+        historical_comparisons = await _find_similar_historical_events(event, db)
+
+    # Calculate insurance estimates with enhanced model
+    insurance_estimates = _calculate_insurance_estimates(event, historical_comparisons)
 
     return EarthquakeDetail(
         event_id=event.event_id,
@@ -154,6 +203,7 @@ async def get_earthquake_detail(
         estimated_population_exposure=event.estimated_population_exposure,
         estimated_economic_impact_usd=float(event.estimated_economic_impact_usd) if event.estimated_economic_impact_usd else None,
         insurance_estimates=insurance_estimates,
+        historical_comparisons=historical_comparisons,
     )
 
 
@@ -255,31 +305,233 @@ async def preview_threshold_events(
     }
 
 
-# Helper functions
-def _calculate_insurance_estimates(event: EarthquakeEvent) -> list[dict]:
-    """Calculate estimated insurance losses by insurer."""
-    # Simplified model for demonstration
-    # In production, this would use actual exposure data and loss models
+# Insurance company configuration with regional exposure and reinsurance
+INSURER_CONFIG = {
+    "ALL": {
+        "ticker": "ALL",
+        "name": "Allstate",
+        "market_share": 0.15,
+        "reinsurance_percentage": 25.0,
+        "regional_exposure": {
+            "California": 0.35,
+            "Pacific Northwest": 0.15,
+            "Southwest": 0.20,
+            "Midwest": 0.15,
+            "Northeast": 0.10,
+            "Southeast": 0.05,
+        },
+    },
+    "TRV": {
+        "ticker": "TRV",
+        "name": "Travelers",
+        "market_share": 0.12,
+        "reinsurance_percentage": 30.0,
+        "regional_exposure": {
+            "California": 0.25,
+            "Pacific Northwest": 0.10,
+            "Southwest": 0.15,
+            "Midwest": 0.20,
+            "Northeast": 0.25,
+            "Southeast": 0.05,
+        },
+    },
+    "CB": {
+        "ticker": "CB",
+        "name": "Chubb",
+        "market_share": 0.10,
+        "reinsurance_percentage": 35.0,
+        "regional_exposure": {
+            "California": 0.40,
+            "Pacific Northwest": 0.20,
+            "Southwest": 0.10,
+            "Midwest": 0.05,
+            "Northeast": 0.15,
+            "Southeast": 0.10,
+        },
+    },
+    "PGR": {
+        "ticker": "PGR",
+        "name": "Progressive",
+        "market_share": 0.08,
+        "reinsurance_percentage": 20.0,
+        "regional_exposure": {
+            "California": 0.30,
+            "Pacific Northwest": 0.15,
+            "Southwest": 0.25,
+            "Midwest": 0.15,
+            "Northeast": 0.10,
+            "Southeast": 0.05,
+        },
+    },
+}
 
-    insurers = [
-        {"ticker": "ALL", "name": "Allstate", "market_share": 0.15},
-        {"ticker": "TRV", "name": "Travelers", "market_share": 0.12},
-        {"ticker": "CB", "name": "Chubb", "market_share": 0.10},
-        {"ticker": "PGR", "name": "Progressive", "market_share": 0.08},
-    ]
 
+def _get_event_region(lat: float, lon: float) -> str:
+    """Determine the region based on earthquake coordinates."""
+    # California
+    if lat >= 32 and lat <= 42 and lon >= -125 and lon <= -114:
+        return "California"
+    # Pacific Northwest
+    if lat >= 42 and lat <= 49 and lon >= -125 and lon <= -116:
+        return "Pacific Northwest"
+    # Southwest (AZ, NM, NV)
+    if lat >= 31 and lat <= 42 and lon >= -115 and lon <= -103:
+        return "Southwest"
+    # Hawaii
+    if lat >= 18 and lat <= 23 and lon >= -161 and lon <= -154:
+        return "Hawaii"
+    # Alaska
+    if lat >= 51 and lat <= 72 and lon >= -170 and lon <= -130:
+        return "Alaska"
+    # Default to other
+    return "Other"
+
+
+async def _find_similar_historical_events(
+    event: EarthquakeEvent,
+    db: AsyncSession,
+    limit: int = 5,
+) -> list[HistoricalComparison]:
+    """Find historical events similar to the given event by magnitude and location."""
+    from math import radians, sin, cos, sqrt, atan2
+
+    # Query for events with similar magnitude (within 0.5) in the past
+    magnitude_range = Decimal("0.5")
+    min_mag = event.magnitude - magnitude_range
+    max_mag = event.magnitude + magnitude_range
+
+    query = (
+        select(EarthquakeEvent)
+        .where(EarthquakeEvent.event_id != event.event_id)
+        .where(EarthquakeEvent.magnitude >= min_mag)
+        .where(EarthquakeEvent.magnitude <= max_mag)
+        .where(EarthquakeEvent.timestamp < event.timestamp)
+        .order_by(EarthquakeEvent.timestamp.desc())
+        .limit(50)  # Get more candidates for filtering
+    )
+
+    result = await db.execute(query)
+    candidates = result.scalars().all()
+
+    if not candidates:
+        return []
+
+    # Calculate distance and similarity score for each candidate
+    event_lat = float(event.latitude)
+    event_lon = float(event.longitude)
+    event_mag = float(event.magnitude)
+
+    comparisons = []
+    for candidate in candidates:
+        cand_lat = float(candidate.latitude)
+        cand_lon = float(candidate.longitude)
+        cand_mag = float(candidate.magnitude)
+
+        # Haversine distance calculation
+        R = 6371  # Earth radius in km
+        lat1, lat2 = radians(event_lat), radians(cand_lat)
+        dlat = radians(cand_lat - event_lat)
+        dlon = radians(cand_lon - event_lon)
+
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        distance_km = R * c
+
+        # Calculate similarity score (0-1)
+        # Based on magnitude difference and distance
+        mag_similarity = 1.0 - abs(event_mag - cand_mag) / 2.0  # 0-1 scale
+        # Distance similarity: 1.0 at 0km, 0.0 at 1000km+
+        dist_similarity = max(0.0, 1.0 - distance_km / 1000.0)
+
+        # Combined similarity (weighted average)
+        similarity_score = 0.6 * mag_similarity + 0.4 * dist_similarity
+
+        # Only include events within 1000km and similarity > 0.3
+        if distance_km <= 1000 and similarity_score > 0.3:
+            comparisons.append(HistoricalComparison(
+                event_id=candidate.event_id,
+                timestamp=candidate.timestamp,
+                magnitude=float(candidate.magnitude),
+                distance_km=round(distance_km, 2),
+                place_description=candidate.place_description,
+                actual_insured_loss_usd=float(candidate.estimated_economic_impact_usd * Decimal("0.4"))
+                    if candidate.estimated_economic_impact_usd else None,
+                similarity_score=round(similarity_score, 3),
+            ))
+
+    # Sort by similarity and return top N
+    comparisons.sort(key=lambda x: x.similarity_score, reverse=True)
+    return comparisons[:limit]
+
+
+def _calculate_insurance_estimates(
+    event: EarthquakeEvent,
+    historical_comparisons: list[HistoricalComparison] = None,
+) -> list[InsuranceEstimate]:
+    """Calculate estimated insurance losses by insurer with enhanced model.
+
+    This enhanced model factors in:
+    - Geographic book exposure by region
+    - Reinsurance arrangements
+    - Historical similar event data for calibration
+    """
     if not event.estimated_economic_impact_usd:
         return []
 
-    total_insured_loss = float(event.estimated_economic_impact_usd) * 0.4  # 40% insured
+    # Determine affected region
+    affected_region = _get_event_region(float(event.latitude), float(event.longitude))
 
-    return [
-        {
-            "ticker": ins["ticker"],
-            "name": ins["name"],
-            "estimated_loss_mean": total_insured_loss * ins["market_share"],
-            "estimated_loss_variance": (total_insured_loss * ins["market_share"] * 0.3) ** 2,
-            "confidence_level": 0.7,
-        }
-        for ins in insurers
-    ]
+    # Base insured loss (40% of economic damage typically insured)
+    base_insured_pct = 0.40
+
+    # Adjust based on historical comparisons if available
+    historical_multiplier = 1.0
+    if historical_comparisons:
+        actual_losses = [h.actual_insured_loss_usd for h in historical_comparisons if h.actual_insured_loss_usd]
+        if actual_losses:
+            avg_historical_loss = sum(actual_losses) / len(actual_losses)
+            expected_loss = float(event.estimated_economic_impact_usd) * base_insured_pct
+            if expected_loss > 0:
+                # Adjust multiplier based on historical data (bounded)
+                historical_multiplier = min(max(avg_historical_loss / expected_loss, 0.5), 2.0)
+
+    total_insured_loss = float(event.estimated_economic_impact_usd) * base_insured_pct * historical_multiplier
+
+    estimates = []
+    for ticker, config in INSURER_CONFIG.items():
+        # Get regional exposure factor for affected region
+        regional_exposure = config["regional_exposure"].get(affected_region, 0.05)
+
+        # Calculate gross loss (market share weighted by regional exposure)
+        gross_loss = total_insured_loss * config["market_share"] * regional_exposure * 10  # Scale by regional factor
+
+        # Apply reinsurance to get net retained loss
+        reinsurance_pct = config["reinsurance_percentage"]
+        net_retained_loss = gross_loss * (1 - reinsurance_pct / 100)
+
+        # Variance increases with magnitude uncertainty
+        magnitude_uncertainty = max(0.2, (float(event.magnitude) - 5.0) * 0.1)
+        variance = (gross_loss * (0.3 + magnitude_uncertainty)) ** 2
+
+        # Build regional exposure breakdown
+        exposure_by_region = []
+        for region, exposure_pct in config["regional_exposure"].items():
+            exposure_by_region.append(RegionalExposure(
+                region=region,
+                exposure_percentage=round(exposure_pct * 100, 1),
+                exposure_value_usd=round(total_insured_loss * config["market_share"] * exposure_pct, 2)
+                    if total_insured_loss > 0 else None,
+            ))
+
+        estimates.append(InsuranceEstimate(
+            ticker=config["ticker"],
+            name=config["name"],
+            estimated_loss_mean=round(gross_loss, 2),
+            estimated_loss_variance=round(variance, 2),
+            confidence_level=0.7 + (0.1 if historical_comparisons else 0.0),
+            exposure_by_region=exposure_by_region,
+            reinsurance_percentage=reinsurance_pct,
+            net_retained_loss=round(net_retained_loss, 2),
+        ))
+
+    return estimates

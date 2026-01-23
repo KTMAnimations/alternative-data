@@ -10,6 +10,7 @@ import structlog
 
 from src.core.config import settings
 from src.core.database import async_engine
+from src.api.middleware.rate_limit import RateLimitMiddleware
 
 logger = structlog.get_logger()
 
@@ -40,6 +41,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Rate limiting middleware (US-023)
+app.add_middleware(
+    RateLimitMiddleware,
+    excluded_paths=["/health", "/docs", "/redoc", "/openapi.json", "/"],
 )
 
 
@@ -75,7 +82,7 @@ async def root():
 
 
 # Import and include routers
-from src.api.routes import catalog, factors, alerts, backtest, geo, admin, auth, streaming, user
+from src.api.routes import catalog, factors, alerts, backtest, geo, admin, auth, streaming, user, tradingview
 
 app.include_router(auth.router, prefix=f"{settings.api_prefix}/auth", tags=["Authentication"])
 app.include_router(user.router, prefix=f"{settings.api_prefix}/user", tags=["User Management"])
@@ -86,3 +93,4 @@ app.include_router(backtest.router, prefix=f"{settings.api_prefix}/backtest", ta
 app.include_router(geo.router, prefix=f"{settings.api_prefix}/geo", tags=["Geographic"])
 app.include_router(admin.router, prefix=f"{settings.api_prefix}/admin", tags=["Admin"])
 app.include_router(streaming.router, prefix=f"{settings.api_prefix}/stream", tags=["Streaming"])
+app.include_router(tradingview.router, prefix=f"{settings.api_prefix}/tradingview", tags=["TradingView"])

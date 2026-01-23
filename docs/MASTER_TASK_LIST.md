@@ -671,7 +671,7 @@
 - [x] Support verbosity levels (simple, delta, full with mean/variance)
 - [x] Implement automatic reconnection handling
 - [x] Implement heartbeat mechanism
-- [ ] Create Python SDK wrapper
+- [x] Create Python SDK wrapper
 
 #### Frontend Implementation
 - [ ] Build WebSocket connection management
@@ -679,14 +679,14 @@
 - [ ] Display real-time updates
 
 #### SDK Implementation
-- [ ] Create `altdata.stream` module in Python SDK
-- [ ] Implement async subscription interface
-- [ ] Document usage examples
+- [x] Create `altdata.stream` module in Python SDK
+- [x] Implement async subscription interface
+- [x] Document usage examples
 
 #### Testing
 - [x] Test WebSocket connection stability
 - [x] Test subscription filtering
-- [ ] Test reconnection logic
+- [x] Test reconnection logic
 
 ---
 
@@ -854,7 +854,7 @@
 - [x] Create `GET /api/v1/backtest/decay/{factor_id}` endpoint
 - [x] Compute IC at horizons: 1d, 2d, 5d, 10d, 21d, 63d, 126d, 252d
 - [x] Estimate signal half-life
-- [ ] Support multi-factor comparison
+- [x] Support multi-factor comparison
 
 #### Frontend Implementation
 - [ ] Build decay curve chart
@@ -878,8 +878,8 @@
 - [x] Compute day-of-week IC breakdown
 - [x] Compute monthly IC breakdown
 - [x] Identify holiday effects (global developed market calendar)
-- [ ] Identify event-based seasonality (earnings season)
-- [ ] Support seasonal adjustment of factor values
+- [x] Identify event-based seasonality (earnings season)
+- [x] Support seasonal adjustment of factor values
 
 #### Frontend Implementation
 - [ ] Build day-of-week IC chart
@@ -890,7 +890,7 @@
 
 #### Testing
 - [x] Test seasonality computation
-- [ ] Test holiday calendar accuracy
+- [x] Test holiday calendar accuracy
 
 ---
 
@@ -902,12 +902,12 @@
 
 #### Backend Implementation
 - [x] Create `POST /api/v1/backtest/export` endpoint
-- [ ] Generate Jupyter notebook with analysis code
-- [ ] Include raw factor data (CSV, Parquet, Arrow)
-- [ ] Include computed statistics (JSON)
+- [x] Generate Jupyter notebook with analysis code
+- [x] Include raw factor data (CSV, Parquet, Arrow)
+- [x] Include computed statistics (JSON)
 - [ ] Include charts as PNG/SVG
-- [ ] Include methodology documentation (PDF/Markdown)
-- [ ] Package as downloadable ZIP
+- [x] Include methodology documentation (PDF/Markdown)
+- [x] Package as downloadable ZIP
 
 #### Frontend Implementation
 - [ ] Build export button on factor detail page
@@ -916,9 +916,9 @@
 
 #### Testing
 - [x] Test export endpoint exists
-- [ ] Test notebook generation
-- [ ] Test all export formats
-- [ ] Test ZIP packaging
+- [x] Test notebook generation
+- [x] Test all export formats
+- [x] Test ZIP packaging
 
 ---
 
@@ -929,12 +929,12 @@
 **So that** I can identify the best performing variant
 
 #### Backend Implementation
-- [ ] Create `Experiment` model
-- [ ] Create CRUD endpoints for experiments
-- [ ] Support control vs treatment factor definition
-- [ ] Track parallel performance metrics
-- [ ] Implement statistical significance testing (p-value)
-- [ ] Support promoting winning variant
+- [x] Create `Experiment` model
+- [x] Create CRUD endpoints for experiments
+- [x] Support control vs treatment factor definition
+- [x] Track parallel performance metrics
+- [x] Implement statistical significance testing (p-value)
+- [x] Support promoting winning variant
 
 #### Frontend Implementation
 - [ ] Build experiment creation form
@@ -943,8 +943,8 @@
 - [ ] Build "Promote to production" button
 
 #### Testing
-- [ ] Test experiment tracking
-- [ ] Test significance calculations
+- [x] Test experiment tracking
+- [x] Test significance calculations
 
 ---
 
@@ -977,7 +977,7 @@
 
 #### Testing
 - [x] Test authentication middleware
-- [ ] Test rate limiting
+- [x] Test rate limiting
 - [ ] Test key rotation
 
 ---
@@ -992,15 +992,15 @@
 - [x] Create `GET /api/v1/factors/{factor_id}/history` endpoint
 - [x] Query params: tickers (comma-separated), start_date, end_date
 - [x] Implement cursor-based pagination
-- [ ] Support response formats: JSON, CSV, Parquet, Arrow
+- [x] Support response formats: JSON, CSV, Parquet, Arrow
 - [x] Include mean and variance in response
 - [x] Include as_of_date and computation_timestamp
-- [ ] Return rate limit headers
+- [x] Return rate limit headers
 
 #### Testing
 - [x] Test all query param combinations
 - [x] Test pagination
-- [ ] Test all response formats
+- [x] Test all response formats
 
 ---
 
@@ -1016,11 +1016,11 @@
 - [x] Optional domain filter
 - [x] Return latest values by default
 - [x] Include factor metadata in response
-- [ ] Support ETF ticker aggregation
+- [x] Support ETF ticker aggregation
 
 #### Testing
 - [x] Test factor listing
-- [ ] Test ETF aggregation
+- [x] Test ETF aggregation
 - [x] Test filtering
 
 ---
@@ -1032,10 +1032,10 @@
 **So that** I can use it in TradingView
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/factors/{factor_id}/pinescript` endpoint
-- [ ] Generate Pine Script code for factor
-- [ ] Include real-time data feed integration code
-- [ ] Generate TradingView setup instructions
+- [x] Create `POST /api/v1/factors/{factor_id}/pinescript` endpoint
+- [x] Generate Pine Script code for factor
+- [x] Include real-time data feed integration code
+- [x] Generate TradingView setup instructions
 
 #### Frontend Implementation
 - [ ] Build "Generate Pine Script" button on factor page
@@ -1045,8 +1045,8 @@
 
 #### Testing
 - [x] Test factor decay endpoint exists (prerequisite)
-- [ ] Validate generated Pine Script syntax
-- [ ] Test code generation for all factor types
+- [x] Validate generated Pine Script syntax
+- [x] Test code generation for all factor types
 
 ---
 
@@ -1057,11 +1057,11 @@
 **So that** I can use both tools seamlessly
 
 #### Backend Implementation
-- [ ] Implement real-time factor push to TradingView
-- [ ] Implement TradingView annotation import
+- [x] Implement real-time factor push to TradingView
+- [x] Implement TradingView annotation import
 - [ ] Synchronize backtesting capabilities
-- [ ] Create Pine Script SDK documentation
-- [ ] Implement OAuth connection to TradingView
+- [x] Create Pine Script SDK documentation
+- [x] Implement OAuth connection to TradingView
 
 #### Frontend Implementation
 - [ ] Build TradingView connection setup
@@ -1070,9 +1070,9 @@
 
 #### Testing
 - [x] Test factor compare endpoint exists
-- [ ] Test real-time sync
-- [ ] Test annotation import
-- [ ] Test OAuth flow
+- [x] Test real-time sync
+- [x] Test annotation import
+- [x] Test OAuth flow
 
 ---
 
@@ -1095,7 +1095,7 @@
 - [x] Include AI-suggested alternatives with scores
 - [x] Create approve/reject/correct endpoints
 - [x] Support bulk approve for high-confidence
-- [ ] Maintain audit trail
+- [x] Maintain audit trail
 
 #### Frontend Implementation
 - [ ] Build mapping review queue
@@ -1107,7 +1107,7 @@
 
 #### Testing
 - [x] Test mapping workflow
-- [ ] Test audit trail
+- [x] Test audit trail
 
 ---
 
@@ -1122,7 +1122,7 @@
 - [x] Filter by data source
 - [x] Create `MappingSuggestion` model
 - [x] Track suggestion status (submitted, evaluating, approved, rejected, implemented)
-- [ ] Notify user on status change
+- [x] Notify user on status change
 
 #### Frontend Implementation
 - [ ] Build unmapped entities list
@@ -1132,7 +1132,7 @@
 
 #### Testing
 - [x] Test suggestion endpoint
-- [ ] Test notifications
+- [x] Test notifications
 
 ---
 
@@ -1145,10 +1145,10 @@
 #### Backend Implementation
 - [x] Create `GET /api/v1/admin/mappings/coverage` endpoint
 - [x] Compute % mapped by data source
-- [ ] Compute $ value/volume of unmapped entities
-- [ ] Prioritize high-value unmapped entities
-- [ ] Track coverage trend over time
-- [ ] Support export of unmapped list
+- [x] Compute $ value/volume of unmapped entities
+- [x] Prioritize high-value unmapped entities
+- [x] Track coverage trend over time
+- [x] Support export of unmapped list
 
 #### Frontend Implementation
 - [ ] Build coverage dashboard
@@ -1160,7 +1160,7 @@
 
 #### Testing
 - [x] Test coverage endpoint
-- [ ] Test prioritization logic
+- [x] Test prioritization logic
 
 ---
 
@@ -1171,12 +1171,12 @@
 **So that** historical data is properly adjusted
 
 #### Backend Implementation
-- [ ] Implement corporate action detection (ticker changes, mergers, spinoffs)
-- [ ] Create alert on detected actions
-- [ ] Show affected entity mappings
-- [ ] Preview historical adjustment impact
-- [ ] Implement approve/reject adjustment
-- [ ] Maintain audit trail
+- [x] Implement corporate action detection (ticker changes, mergers, spinoffs)
+- [x] Create alert on detected actions
+- [x] Show affected entity mappings
+- [x] Preview historical adjustment impact
+- [x] Implement approve/reject adjustment
+- [x] Maintain audit trail
 
 #### Frontend Implementation
 - [ ] Build corporate action alerts
@@ -1186,8 +1186,8 @@
 - [ ] Audit trail view
 
 #### Testing
-- [ ] Test corporate action detection
-- [ ] Test historical adjustment
+- [x] Test corporate action detection
+- [x] Test historical adjustment
 
 ---
 
@@ -1208,9 +1208,9 @@
 - [x] Compute estimates after earthquake above threshold
 - [x] Break down by major insurers (ALL, TRV, CB, PGR, etc.)
 - [x] Include confidence intervals (mean + variance)
-- [ ] Factor in geographic book exposure
-- [ ] Factor in reinsurance arrangements
-- [ ] Compare to historical similar events
+- [x] Factor in geographic book exposure
+- [x] Factor in reinsurance arrangements
+- [x] Compare to historical similar events
 
 #### Frontend Implementation
 - [ ] Build loss estimate panel (triggered by qualifying event)
@@ -1221,8 +1221,8 @@
 #### Testing
 - [x] Test earthquake detail endpoint
 - [x] Test insurance estimates schema
-- [ ] Validate loss model accuracy
-- [ ] Test historical comparison
+- [x] Validate loss model accuracy
+- [x] Test historical comparison
 
 ---
 
@@ -1234,10 +1234,10 @@
 
 #### Backend Implementation
 - [x] Create box office prediction model (OpeningWeekendSurprise factor)
-- [ ] Implement ensemble model for weekend forecast
+- [x] Implement ensemble model for weekend forecast
 - [x] Compute confidence intervals (via factor variance)
-- [ ] Compare to studio guidance/tracking
-- [ ] Track historical model accuracy
+- [x] Compare to studio guidance/tracking
+- [x] Track historical model accuracy
 - [x] Map predictions to studio tickers
 
 #### Frontend Implementation
@@ -1251,8 +1251,8 @@
 #### Testing
 - [x] Test box office factor exists
 - [x] Test studio market share factor exists
-- [ ] Validate prediction model accuracy
-- [ ] Test ensemble computation
+- [x] Validate prediction model accuracy
+- [x] Test ensemble computation
 
 ---
 
@@ -1272,8 +1272,8 @@
 - [x] Create `DataSource` model with full metadata
 - [x] Create catalog listing and detail endpoints
 - [x] Support filtering, sorting, and pagination
-- [ ] Create dedicated source request submission endpoint
-- [ ] Notify user on status changes
+- [x] Create dedicated source request submission endpoint
+- [x] Notify user on status changes
 
 #### Frontend Implementation
 - [ ] Build request submission form (name, URL, description, use case)
@@ -1282,8 +1282,8 @@
 - [ ] Notification display
 
 #### Testing
-- [ ] Test request workflow
-- [ ] Test notifications
+- [x] Test request workflow
+- [x] Test notifications
 
 ---
 
@@ -1294,12 +1294,12 @@
 **So that** I can identify and fix issues
 
 #### Backend Implementation
-- [ ] Implement collector health tracking
-- [ ] Create `GET /api/v1/admin/collectors/health` endpoint
-- [ ] Track up/down status, last success timestamp
-- [ ] Track data freshness vs SLA
-- [ ] Store error logs
-- [ ] Implement manual trigger endpoint
+- [x] Implement collector health tracking
+- [x] Create `GET /api/v1/admin/collectors/health` endpoint
+- [x] Track up/down status, last success timestamp
+- [x] Track data freshness vs SLA
+- [x] Store error logs
+- [x] Implement manual trigger endpoint
 
 #### Frontend Implementation
 - [ ] Build health dashboard
@@ -1311,9 +1311,9 @@
 - [ ] Manual trigger button
 
 #### Testing
-- [ ] Test health tracking
-- [ ] Test SLA breach detection
-- [ ] Test manual trigger
+- [x] Test health tracking
+- [x] Test SLA breach detection
+- [x] Test manual trigger
 
 ---
 
@@ -1324,11 +1324,11 @@
 **So that** I can maintain continuity in my research
 
 #### Backend Implementation
-- [ ] Implement source archival workflow
-- [ ] Maintain full API access to archived data
-- [ ] Store deprecation reason and date
-- [ ] Link to alternative sources
-- [ ] Ensure factors from archived sources remain computable
+- [x] Implement source archival workflow
+- [x] Maintain full API access to archived data
+- [x] Store deprecation reason and date
+- [x] Link to alternative sources
+- [x] Ensure factors from archived sources remain computable
 
 #### Frontend Implementation
 - [ ] Display archived label in catalog
@@ -1337,8 +1337,8 @@
 - [ ] Full data access via UI/API
 
 #### Testing
-- [ ] Test archived data access
-- [ ] Test factor computation on archived data
+- [x] Test archived data access
+- [x] Test factor computation on archived data
 
 ---
 

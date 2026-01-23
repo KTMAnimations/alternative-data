@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum as SQLEnum,
     Float,
+    ForeignKey,
     Index,
     Integer,
     JSON,
@@ -84,6 +85,134 @@ class DataSource(Base, TimestampMixin):
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
     archived_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # US-035: Alternative source linking for archived sources
+    alternative_source_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("data_sources.id"), nullable=True
+    )
+
+
+class RequestStatus(str, Enum):
+    """Status for data source requests."""
+
+    PENDING = "pending"
+    UNDER_REVIEW = "under_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class RequestPriority(str, Enum):
+    """Priority levels for data source requests."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class DataSourceRequest(Base, TimestampMixin):
+    """User requests for new data sources (US-033)."""
+
+    __tablename__ = "data_source_requests"
+    __table_args__ = (
+        Index("ix_source_request_status", "status"),
+        Index("ix_source_request_requester", "requester_id"),
+        Index("ix_source_request_priority", "priority"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    use_case: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[RequestPriority] = mapped_column(
+        SQLEnum(RequestPriority), default=RequestPriority.MEDIUM
+    )
+    status: Mapped[RequestStatus] = mapped_column(
+        SQLEnum(RequestStatus), default=RequestStatus.PENDING
+    )
+
+    # Requester information
+    requester_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
+
+    # Review information
+    reviewed_by_user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # If approved and implemented, link to created data source
+    created_source_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("data_sources.id"), nullable=True
+    )
+
+
+class CollectorStatus(str, Enum):
+    """Health status for collectors."""
+
+    UP = "up"
+    DOWN = "down"
+    DEGRADED = "degraded"
+
+
+class CollectorHealthLog(Base, TimestampMixin):
+    """Health tracking for data collectors (US-034)."""
+
+    __tablename__ = "collector_health_logs"
+    __table_args__ = (
+        Index("ix_collector_health_source", "source_id"),
+        Index("ix_collector_health_status", "status"),
+        Index("ix_collector_health_run_started", "run_started_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("data_sources.id"), nullable=False
+    )
+
+    # Run information
+    run_started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    run_completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Status
+    status: Mapped[CollectorStatus] = mapped_column(
+        SQLEnum(CollectorStatus), nullable=False
+    )
+    is_success: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Metrics
+    records_collected: Mapped[int] = mapped_column(Integer, default=0)
+    records_processed: Mapped[int] = mapped_column(Integer, default=0)
+    records_failed: Mapped[int] = mapped_column(Integer, default=0)
+    duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Error tracking
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_stack_trace: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Data freshness tracking
+    data_freshness_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    sla_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    sla_breach: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Trigger info (manual vs scheduled)
+    triggered_by: Mapped[str] = mapped_column(
+        String(50), default="scheduled"
+    )  # scheduled, manual, retry
+    triggered_by_user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+    task_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
 
 class TSACheckpoint(Base, TimestampMixin):

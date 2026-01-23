@@ -11,11 +11,32 @@ from src.models.data_sources import (
     CloudflareRadarMetrics,
     ZillowRentalIndex,
     DataSource,
+    DataSourceRequest,
+    RequestPriority,
+    RequestStatus,
+    CollectorHealthLog,
+    CollectorStatus,
 )
 from src.models.factors import Factor, FactorValue, FactorRelationship
 from src.models.alerts import Alert, AlertHistory
-from src.models.entity_mappings import EntityMapping, MappingSuggestion
+from src.models.entity_mappings import (
+    EntityMapping,
+    MappingSuggestion,
+    CorporateAction,
+    MappingAuditLog,
+    Notification,
+    CoverageSnapshot,
+    EntityTradingMetrics,
+    MappingStatus,
+    SuggestionStatus,
+    CorporateActionType,
+    CorporateActionStatus,
+    NotificationType,
+    NotificationChannel,
+    AuditActionType,
+)
 from src.models.users import User, APIKey, UserTier
+from src.models.experiments import Experiment, ExperimentMetricSnapshot, ExperimentStatus
 
 __all__ = [
     "Base",
@@ -30,6 +51,13 @@ __all__ = [
     "CloudflareRadarMetrics",
     "ZillowRentalIndex",
     "DataSource",
+    # US-033: Data Source Requests
+    "DataSourceRequest",
+    "RequestPriority",
+    "RequestStatus",
+    # US-034: Collector Health
+    "CollectorHealthLog",
+    "CollectorStatus",
     # Factors
     "Factor",
     "FactorValue",
@@ -40,8 +68,24 @@ __all__ = [
     # Entity Mapping
     "EntityMapping",
     "MappingSuggestion",
+    "CorporateAction",
+    "MappingAuditLog",
+    "Notification",
+    "CoverageSnapshot",
+    "EntityTradingMetrics",
+    "MappingStatus",
+    "SuggestionStatus",
+    "CorporateActionType",
+    "CorporateActionStatus",
+    "NotificationType",
+    "NotificationChannel",
+    "AuditActionType",
     # Users
     "User",
     "APIKey",
     "UserTier",
+    # Experiments (A/B Testing)
+    "Experiment",
+    "ExperimentMetricSnapshot",
+    "ExperimentStatus",
 ]

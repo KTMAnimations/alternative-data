@@ -1,17 +1,20 @@
 """Data catalog API routes."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
 from src.models.data_sources import (
     DataSource,
     DataSourceCategory,
+    DataSourceRequest,
+    RequestPriority,
+    RequestStatus,
     UpdateFrequency,
     SaturationLevel,
 )
@@ -70,6 +73,46 @@ class PreviewResponse(BaseModel):
     completeness_pct: float
     last_updated: Optional[date]
     statistics: dict
+
+
+# US-033: Data Source Request Schemas
+class DataSourceRequestCreate(BaseModel):
+    """Schema for creating a new data source request."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    url: Optional[str] = Field(None, max_length=1000)
+    description: str = Field(..., min_length=10)
+    use_case: str = Field(..., min_length=10)
+    priority: RequestPriority = Field(default=RequestPriority.MEDIUM)
+
+
+class DataSourceRequestResponse(BaseModel):
+    """Response schema for data source request."""
+
+    id: int
+    name: str
+    url: Optional[str]
+    description: str
+    use_case: str
+    priority: RequestPriority
+    status: RequestStatus
+    requester_id: int
+    created_at: datetime
+    reviewed_at: Optional[datetime]
+    review_notes: Optional[str]
+    created_source_id: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+
+class DataSourceRequestListResponse(BaseModel):
+    """Response for data source request list."""
+
+    items: list[DataSourceRequestResponse]
+    total: int
+    page: int
+    page_size: int
 
 
 # Routes
@@ -299,3 +342,108 @@ async def _get_preview_data(
     }
 
     return data, stats
+
+
+# US-033: Data Source Request Endpoints
+@router.post("/requests", response_model=DataSourceRequestResponse, status_code=status.HTTP_201_CREATED)
+async def submit_source_request(
+    request_data: DataSourceRequestCreate,
+    db: AsyncSession = Depends(get_db),
+    # TODO: Add user authentication
+):
+    """
+    Submit a request for a new data source (US-033).
+
+    Allows users to request new data sources to be added to the platform.
+    Notifications are sent when request status changes.
+    """
+    # For now, use a placeholder user_id (in production, get from auth)
+    requester_id = 1  # TODO: Get from authenticated user
+
+    new_request = DataSourceRequest(
+        name=request_data.name,
+        url=request_data.url,
+        description=request_data.description,
+        use_case=request_data.use_case,
+        priority=request_data.priority,
+        status=RequestStatus.PENDING,
+        requester_id=requester_id,
+    )
+
+    db.add(new_request)
+    await db.flush()
+    await db.refresh(new_request)
+
+    return DataSourceRequestResponse.model_validate(new_request)
+
+
+@router.get("/requests", response_model=DataSourceRequestListResponse)
+async def list_source_requests(
+    status_filter: Optional[RequestStatus] = Query(None, alias="status"),
+    priority: Optional[RequestPriority] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    # TODO: Add user authentication
+):
+    """
+    List data source requests (US-033).
+
+    Returns paginated list of source requests with optional filtering.
+    """
+    query = select(DataSourceRequest)
+
+    # Apply filters
+    if status_filter:
+        query = query.where(DataSourceRequest.status == status_filter)
+    if priority:
+        query = query.where(DataSourceRequest.priority == priority)
+
+    # Count total
+    count_query = select(func.count(DataSourceRequest.id))
+    if status_filter:
+        count_query = count_query.where(DataSourceRequest.status == status_filter)
+    if priority:
+        count_query = count_query.where(DataSourceRequest.priority == priority)
+
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
+
+    # Order by priority (critical first) and created date
+    query = query.order_by(
+        DataSourceRequest.priority.desc(),
+        DataSourceRequest.created_at.desc()
+    )
+
+    # Pagination
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+
+    result = await db.execute(query)
+    requests = result.scalars().all()
+
+    return DataSourceRequestListResponse(
+        items=[DataSourceRequestResponse.model_validate(r) for r in requests],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/requests/{request_id}", response_model=DataSourceRequestResponse)
+async def get_source_request(
+    request_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get details of a specific data source request."""
+    query = select(DataSourceRequest).where(DataSourceRequest.id == request_id)
+    result = await db.execute(query)
+    source_request = result.scalar_one_or_none()
+
+    if not source_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Data source request {request_id} not found",
+        )
+
+    return DataSourceRequestResponse.model_validate(source_request)

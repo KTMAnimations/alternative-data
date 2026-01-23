@@ -64,6 +64,7 @@ class User(Base, TimestampMixin):
     # Relationships
     api_keys = relationship("APIKey", back_populates="user", lazy="dynamic")
     usage_records = relationship("UsageRecord", back_populates="user", lazy="dynamic")
+    experiments = relationship("Experiment", back_populates="user", lazy="dynamic")
 
 
 class APIKey(Base, TimestampMixin):

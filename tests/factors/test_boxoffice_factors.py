@@ -8,9 +8,12 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Ensure patch is available for all tests
+
 from src.transformations.factors.boxoffice_factors import (
     OpeningWeekendSurprise,
     StudioMarketShare,
+    WeekendForecastEnsemble,
     BOXOFFICE_FACTORS,
 )
 from src.transformations.factors.base import FactorResult
@@ -397,3 +400,305 @@ class TestFactorValidation:
         """Test validation accepts today."""
         is_valid = await opening_factor.validate_inputs(date.today())
         assert is_valid is True
+
+
+class TestWeekendForecastEnsemble:
+    """Tests for WeekendForecastEnsemble factor (US-032)."""
+
+    @pytest.fixture
+    def factor(self):
+        """Create factor instance."""
+        from src.transformations.factors.boxoffice_factors import WeekendForecastEnsemble
+        return WeekendForecastEnsemble()
+
+    def test_factor_initialization(self, factor):
+        """Test factor is properly initialized."""
+        assert factor.factor_id == "weekend_forecast_ensemble"
+        assert factor.name == "Weekend Forecast Ensemble"
+        assert factor.domain == "entertainment"
+        assert factor.primary_entities == PRIMARY_TICKERS
+
+    def test_default_weights_sum_to_one(self, factor):
+        """Test default ensemble weights sum to 1.0."""
+        total_weight = sum(factor.DEFAULT_WEIGHTS.values())
+        assert abs(total_weight - 1.0) < 0.001
+
+    def test_seasonal_multipliers_defined(self, factor):
+        """Test seasonal multipliers are defined for all months."""
+        for month in range(1, 13):
+            assert month in factor.SEASONAL_MULTIPLIERS
+            assert factor.SEASONAL_MULTIPLIERS[month] > 0
+
+    def test_seasonal_multipliers_reasonable(self, factor):
+        """Test seasonal multipliers are within reasonable bounds."""
+        for month, mult in factor.SEASONAL_MULTIPLIERS.items():
+            # Multipliers should be between 0.5 and 2.0
+            assert 0.5 <= mult <= 2.0
+
+    def test_baseline_per_theater_defined(self, factor):
+        """Test per-theater baselines are defined."""
+        assert "wide_release" in factor.BASELINE_PER_THEATER
+        assert "limited_release" in factor.BASELINE_PER_THEATER
+        assert "platform_release" in factor.BASELINE_PER_THEATER
+
+    def test_theater_count_prediction(self, factor):
+        """Test theater count prediction method."""
+        # Create mock movie with 4000 theaters
+        mock_movie = MagicMock(spec=BoxOfficeDaily)
+        mock_movie.theater_count = 4000
+
+        prediction = factor._theater_count_prediction(mock_movie)
+
+        # Should be 4000 * $8500 * 3 = $102M
+        expected = 4000 * float(factor.BASELINE_PER_THEATER["wide_release"]) * 3
+        assert prediction == expected
+
+    def test_theater_count_prediction_limited_release(self, factor):
+        """Test theater count prediction for limited release."""
+        mock_movie = MagicMock(spec=BoxOfficeDaily)
+        mock_movie.theater_count = 2000
+
+        prediction = factor._theater_count_prediction(mock_movie)
+
+        # Should use limited release baseline
+        expected = 2000 * float(factor.BASELINE_PER_THEATER["limited_release"]) * 3
+        assert prediction == expected
+
+    def test_seasonal_prediction_summer(self, factor):
+        """Test seasonal adjustment in summer."""
+        mock_movie = MagicMock(spec=BoxOfficeDaily)
+        mock_movie.theater_count = 4000
+
+        summer_date = date(2025, 7, 15)  # July
+        prediction = factor._seasonal_prediction(mock_movie, summer_date)
+
+        base_pred = factor._theater_count_prediction(mock_movie)
+        expected = base_pred * factor.SEASONAL_MULTIPLIERS[7]
+
+        assert prediction == expected
+        assert prediction > base_pred  # Summer should be higher
+
+    def test_seasonal_prediction_january(self, factor):
+        """Test seasonal adjustment in January slump."""
+        mock_movie = MagicMock(spec=BoxOfficeDaily)
+        mock_movie.theater_count = 4000
+
+        jan_date = date(2025, 1, 15)  # January
+        prediction = factor._seasonal_prediction(mock_movie, jan_date)
+
+        base_pred = factor._theater_count_prediction(mock_movie)
+
+        assert prediction < base_pred  # January should be lower
+
+    def test_get_formula(self, factor):
+        """Test formula is properly defined."""
+        formula = factor.get_formula()
+        assert formula is not None
+        assert "P_{ensemble}" in formula
+        assert "w_m" in formula
+
+    def test_get_economic_rationale(self, factor):
+        """Test economic rationale is properly defined."""
+        rationale = factor.get_economic_rationale()
+        assert rationale is not None
+        assert len(rationale) > 100
+        assert "ensemble" in rationale.lower()
+
+    @pytest.mark.asyncio
+    async def test_compute_returns_results_for_all_tickers(self, factor):
+        """Test compute returns results for all primary tickers."""
+        as_of_date = date(2025, 1, 15)
+
+        with patch('src.transformations.factors.boxoffice_factors.get_async_session') as mock_session:
+            mock_ctx = AsyncMock()
+            mock_db = AsyncMock(spec=AsyncSession)
+
+            # Mock empty opening movies
+            mock_result = MagicMock()
+            mock_result.scalars.return_value.all.return_value = []
+            mock_db.execute.return_value = mock_result
+
+            mock_ctx.__aenter__.return_value = mock_db
+            mock_ctx.__aexit__.return_value = None
+            mock_session.return_value = mock_ctx
+
+            results = await factor.compute(as_of_date)
+
+            assert len(results) == len(PRIMARY_TICKERS)
+            for result in results:
+                assert isinstance(result, FactorResult)
+                assert result.ticker in PRIMARY_TICKERS
+                assert result.factor_id == "weekend_forecast_ensemble"
+
+
+class TestModelAccuracyTracking:
+    """Tests for model accuracy tracking (US-032)."""
+
+    def test_record_prediction_accuracy(self):
+        """Test recording prediction accuracy."""
+        from src.transformations.factors.boxoffice_factors import (
+            record_prediction_accuracy,
+            MODEL_ACCURACY_HISTORY,
+        )
+
+        # Clear history for test
+        MODEL_ACCURACY_HISTORY.clear()
+
+        metrics = record_prediction_accuracy(
+            prediction_date=date(2025, 1, 17),
+            movie_title="Test Movie",
+            distributor_ticker="DIS",
+            predicted_gross=50000000.0,
+            actual_gross=55000000.0,
+            method_predictions={
+                "theater_count": 48000000.0,
+                "historical_avg": 52000000.0,
+                "seasonal": 50000000.0,
+            },
+        )
+
+        assert metrics.movie_title == "Test Movie"
+        assert metrics.predicted_gross == 50000000.0
+        assert metrics.actual_gross == 55000000.0
+
+        # Check error calculation: (50M - 55M) / 55M * 100 = -9.09%
+        expected_error = (50000000.0 - 55000000.0) / 55000000.0 * 100
+        assert abs(metrics.prediction_error_pct - expected_error) < 0.01
+
+        # Check method errors
+        assert "theater_count" in metrics.method_errors
+        assert "historical_avg" in metrics.method_errors
+
+    def test_get_model_accuracy_history(self):
+        """Test getting model accuracy history."""
+        from src.transformations.factors.boxoffice_factors import (
+            record_prediction_accuracy,
+            get_model_accuracy_history,
+            MODEL_ACCURACY_HISTORY,
+        )
+
+        # Clear and record some data
+        MODEL_ACCURACY_HISTORY.clear()
+
+        record_prediction_accuracy(
+            prediction_date=date(2025, 1, 10),
+            movie_title="Movie A",
+            distributor_ticker="DIS",
+            predicted_gross=50000000.0,
+            actual_gross=55000000.0,
+            method_predictions={},
+        )
+
+        record_prediction_accuracy(
+            prediction_date=date(2025, 1, 17),
+            movie_title="Movie B",
+            distributor_ticker="WBD",
+            predicted_gross=30000000.0,
+            actual_gross=28000000.0,
+            method_predictions={},
+        )
+
+        # Get all history
+        all_history = get_model_accuracy_history()
+        assert len(all_history) == 2
+
+        # Filter by ticker
+        dis_history = get_model_accuracy_history(ticker="DIS")
+        assert len(dis_history) == 1
+        assert dis_history[0]["distributor_ticker"] == "DIS"
+
+    def test_get_model_accuracy_summary_empty(self):
+        """Test accuracy summary with no data."""
+        from src.transformations.factors.boxoffice_factors import (
+            get_model_accuracy_summary,
+            MODEL_ACCURACY_HISTORY,
+        )
+
+        MODEL_ACCURACY_HISTORY.clear()
+
+        summary = get_model_accuracy_summary()
+
+        assert summary["total_predictions"] == 0
+        assert summary["accuracy_data_available"] is False
+
+    def test_get_model_accuracy_summary_with_data(self):
+        """Test accuracy summary with data."""
+        from src.transformations.factors.boxoffice_factors import (
+            record_prediction_accuracy,
+            get_model_accuracy_summary,
+            MODEL_ACCURACY_HISTORY,
+        )
+
+        MODEL_ACCURACY_HISTORY.clear()
+
+        # Record several predictions
+        for i in range(5):
+            predicted = 50000000.0 + i * 1000000
+            actual = 52000000.0 + i * 1000000
+            record_prediction_accuracy(
+                prediction_date=date(2025, 1, 10 + i),
+                movie_title=f"Movie {i}",
+                distributor_ticker="DIS",
+                predicted_gross=predicted,
+                actual_gross=actual,
+                method_predictions={
+                    "theater_count": predicted * 0.95,
+                    "historical_avg": predicted * 1.05,
+                },
+            )
+
+        summary = get_model_accuracy_summary()
+
+        assert summary["total_predictions"] == 5
+        assert summary["accuracy_data_available"] is True
+        assert "ensemble_mae_pct" in summary
+        assert "within_10pct_accuracy" in summary
+        assert "method_mae_pct" in summary
+
+    def test_weekend_prediction_dataclass(self):
+        """Test WeekendPrediction dataclass."""
+        from src.transformations.factors.boxoffice_factors import WeekendPrediction
+
+        prediction = WeekendPrediction(
+            movie_title="Test Movie",
+            distributor_ticker="DIS",
+            predicted_weekend_gross=50000000.0,
+            confidence_interval_low=40000000.0,
+            confidence_interval_high=60000000.0,
+            prediction_methods={
+                "theater_count": 48000000.0,
+                "historical_avg": 52000000.0,
+            },
+            ensemble_weights={
+                "theater_count": 0.5,
+                "historical_avg": 0.5,
+            },
+            studio_guidance=45000000.0,
+            guidance_variance_pct=11.1,
+        )
+
+        assert prediction.movie_title == "Test Movie"
+        assert prediction.predicted_weekend_gross == 50000000.0
+        assert prediction.studio_guidance == 45000000.0
+
+
+class TestBoxOfficeFactorsComplete:
+    """Tests for complete boxoffice factors export."""
+
+    def test_boxoffice_factors_includes_new_factor(self):
+        """Test BOXOFFICE_FACTORS includes WeekendForecastEnsemble."""
+        from src.transformations.factors.boxoffice_factors import (
+            BOXOFFICE_FACTORS,
+            WeekendForecastEnsemble,
+        )
+
+        assert len(BOXOFFICE_FACTORS) == 3
+        assert WeekendForecastEnsemble in BOXOFFICE_FACTORS
+
+    def test_all_factors_have_unique_ids(self):
+        """Test all factors have unique factor_ids."""
+        factor_ids = set()
+        for FactorClass in BOXOFFICE_FACTORS:
+            factor = FactorClass()
+            assert factor.factor_id not in factor_ids
+            factor_ids.add(factor.factor_id)
