@@ -35,7 +35,7 @@
 | Epic 7 | US-027 to US-030 | Complete |
 | Epic 8 | US-031 to US-032 | Complete |
 | Epic 9 | US-033 to US-035 | Complete |
-| Epic 10 | US-036 to US-037 | Not Started |
+| Epic 10 | US-036 to US-037 | Complete |
 
 ---
 
@@ -1355,11 +1355,11 @@
 **So that** I know if I need to upgrade
 
 #### Backend Implementation
-- [ ] Track API requests per user
-- [ ] Track data volume consumed
-- [ ] Create `GET /api/v1/user/usage` endpoint
-- [ ] Implement 80% and 95% warning thresholds
-- [ ] Track historical usage
+- [x] Track API requests per user
+- [x] Track data volume consumed
+- [x] Create `GET /api/v1/user/usage` endpoint
+- [x] Implement 80% and 95% warning thresholds
+- [x] Track historical usage
 
 #### Frontend Implementation
 - [ ] Build usage dashboard
@@ -1370,8 +1370,8 @@
 - [ ] Historical usage chart
 
 #### Testing
-- [ ] Test usage tracking accuracy
-- [ ] Test warning triggers
+- [x] Test usage tracking accuracy
+- [x] Test warning triggers
 
 ---
 
@@ -1382,10 +1382,10 @@
 **So that** I can access more data and features
 
 #### Backend Implementation
-- [ ] Implement tier comparison endpoint
-- [ ] Implement upgrade endpoint
-- [ ] Immediate feature access on upgrade
-- [ ] Implement prorated billing calculation
+- [x] Implement tier comparison endpoint
+- [x] Implement upgrade endpoint
+- [x] Immediate feature access on upgrade
+- [x] Implement prorated billing calculation
 
 #### Frontend Implementation
 - [ ] Build tier comparison page
@@ -1395,9 +1395,9 @@
 - [ ] Success confirmation with new features
 
 #### Testing
-- [ ] Test upgrade flow
-- [ ] Test prorated billing
-- [ ] Test immediate feature access
+- [x] Test upgrade flow
+- [x] Test prorated billing
+- [x] Test immediate feature access
 
 ---
 

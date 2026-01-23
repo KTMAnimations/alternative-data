@@ -75,9 +75,10 @@ async def root():
 
 
 # Import and include routers
-from src.api.routes import catalog, factors, alerts, backtest, geo, admin, auth, streaming
+from src.api.routes import catalog, factors, alerts, backtest, geo, admin, auth, streaming, user
 
 app.include_router(auth.router, prefix=f"{settings.api_prefix}/auth", tags=["Authentication"])
+app.include_router(user.router, prefix=f"{settings.api_prefix}/user", tags=["User Management"])
 app.include_router(catalog.router, prefix=f"{settings.api_prefix}/catalog", tags=["Data Catalog"])
 app.include_router(factors.router, prefix=f"{settings.api_prefix}/factors", tags=["Factors"])
 app.include_router(alerts.router, prefix=f"{settings.api_prefix}/alerts", tags=["Alerts"])
