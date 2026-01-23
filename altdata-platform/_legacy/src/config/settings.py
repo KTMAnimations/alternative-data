@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     api_reload: bool = Field(default=True)
     api_key_admin: Optional[str] = Field(default=None)
     api_key_default: Optional[str] = Field(default=None)
+
+    # JWT Authentication
+    jwt_secret_key: str = Field(default="change-this-secret-in-production-use-openssl-rand-hex-32")
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_token_expire_minutes: int = Field(default=30)
+    jwt_refresh_token_expire_days: int = Field(default=7)
     
     # External APIs
     sec_edgar_user_agent: str = Field(default="AltData Platform contact@example.com")

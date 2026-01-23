@@ -28,6 +28,7 @@ from src.transformations.base import FactorRegistry
 # Import routers
 from src.alerts.api import router as alerts_router
 from src.backtest.api import router as backtest_router
+from src.auth.router import router as auth_router
 
 # Import factors to register them
 from src.transformations.factors import (
@@ -125,6 +126,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth_router)
 app.include_router(alerts_router)
 app.include_router(backtest_router)
 

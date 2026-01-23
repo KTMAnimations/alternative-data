@@ -214,7 +214,7 @@ class FREDSeries(Base):
 class APIKey(Base):
     """API keys for client authentication."""
     __tablename__ = "api_keys"
-    
+
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     key_hash = Column(String(64), nullable=False, unique=True, index=True)
     name = Column(String(100), nullable=False)
@@ -225,3 +225,9 @@ class APIKey(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     expires_at = Column(DateTime(timezone=True))
     last_used_at = Column(DateTime(timezone=True))
+
+    # User relationship (nullable for backward compatibility with existing keys)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Relationship to User (defined in auth/models.py)
+    user = relationship("User", back_populates="api_keys")

@@ -7,11 +7,27 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import math
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from src.models.database import SessionLocal
+
+
+def _safe_round(value: float, decimals: int = 4) -> Optional[float]:
+    """Safely round a float value, handling NaN and Infinity.
+
+    Args:
+        value: The value to round.
+        decimals: Number of decimal places.
+
+    Returns:
+        Rounded value, or None if value is NaN or Infinity.
+    """
+    if value is None or math.isnan(value) or math.isinf(value):
+        return None
+    return round(value, decimals)
 from src.models.schemas import Factor
 from .metrics import (
     calculate_sharpe,
@@ -89,18 +105,18 @@ class BacktestResult:
             "rebalance_freq": self.rebalance_freq,
             "long_short": self.long_short,
             "top_n": self.top_n,
-            "sharpe_ratio": round(self.sharpe_ratio, 4),
-            "sortino_ratio": round(self.sortino_ratio, 4),
-            "calmar_ratio": round(self.calmar_ratio, 4),
-            "max_drawdown": round(self.max_drawdown, 4),
-            "total_return": round(self.total_return, 4),
-            "annualized_return": round(self.annualized_return, 4),
-            "volatility": round(self.volatility, 4),
-            "ic_mean": round(self.ic_mean, 4),
-            "ic_ir": round(self.ic_ir, 4),
-            "win_rate": round(self.win_rate, 4),
-            "profit_factor": round(self.profit_factor, 4),
-            "turnover": round(self.turnover, 4),
+            "sharpe_ratio": _safe_round(self.sharpe_ratio),
+            "sortino_ratio": _safe_round(self.sortino_ratio),
+            "calmar_ratio": _safe_round(self.calmar_ratio),
+            "max_drawdown": _safe_round(self.max_drawdown),
+            "total_return": _safe_round(self.total_return),
+            "annualized_return": _safe_round(self.annualized_return),
+            "volatility": _safe_round(self.volatility),
+            "ic_mean": _safe_round(self.ic_mean),
+            "ic_ir": _safe_round(self.ic_ir),
+            "win_rate": _safe_round(self.win_rate),
+            "profit_factor": _safe_round(self.profit_factor),
+            "turnover": _safe_round(self.turnover),
             "completed_at": self.completed_at.isoformat(),
         }
 

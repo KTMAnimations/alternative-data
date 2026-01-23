@@ -218,6 +218,62 @@ def mock_transactions() -> list:
 # MARKERS
 # ===========================================
 
+# ===========================================
+# AUTH FIXTURES
+# ===========================================
+
+@pytest.fixture
+def test_user_data() -> dict:
+    """Test user registration data."""
+    return {
+        "email": "test@example.com",
+        "password": "TestPassword123",
+        "full_name": "Test User",
+    }
+
+
+@pytest.fixture
+def create_test_user(api_client: TestClient, test_user_data: dict):
+    """Create a test user and return user data."""
+    response = api_client.post("/api/v1/auth/register", json=test_user_data)
+    if response.status_code == 200:
+        return response.json()
+    # User might already exist, try to get via login
+    return None
+
+
+@pytest.fixture
+def auth_tokens(api_client: TestClient, test_user_data: dict) -> dict:
+    """Get auth tokens for test user."""
+    # First register (ignore if already exists)
+    api_client.post("/api/v1/auth/register", json=test_user_data)
+
+    # Login to get tokens
+    login_data = {
+        "username": test_user_data["email"],
+        "password": test_user_data["password"],
+    }
+    response = api_client.post(
+        "/api/v1/auth/login",
+        data=login_data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    return response.json()
+
+
+@pytest.fixture
+def auth_headers(auth_tokens: dict) -> dict:
+    """Get authorization headers for authenticated requests."""
+    return {"Authorization": f"Bearer {auth_tokens['access_token']}"}
+
+
+@pytest.fixture
+def jwt_authenticated_client(api_client: TestClient, auth_headers: dict) -> TestClient:
+    """Client with JWT auth header set."""
+    api_client.headers.update(auth_headers)
+    return api_client
+
+
 def pytest_configure(config):
     """Configure custom markers."""
     config.addinivalue_line(
@@ -228,4 +284,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "e2e: marks tests as end-to-end tests"
+    )
+    config.addinivalue_line(
+        "markers", "auth: marks tests as authentication tests"
     )
