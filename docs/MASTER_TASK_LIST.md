@@ -29,7 +29,7 @@
 | Epic 1 | US-001 to US-004 | Complete |
 | Epic 2 | US-005 to US-008 | Complete |
 | Epic 3 | US-009 to US-013 | Complete |
-| Epic 4 | US-014 to US-016 | Not Started |
+| Epic 4 | US-014 to US-016 | Complete |
 | Epic 5 | US-017 to US-021 | Not Started |
 | Epic 6 | US-022 to US-026 | Not Started |
 | Epic 7 | US-027 to US-030 | Not Started |
@@ -731,12 +731,12 @@
 **So that** I can assess exposure for insurance companies
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/geo/earthquakes` endpoint
-- [ ] Support filters: magnitude_min, date_range
-- [ ] Return GeoJSON with event details
-- [ ] Compute population within radius
-- [ ] Compute estimated economic impact
-- [ ] Compute insurance loss estimates by insurer
+- [x] Create `GET /api/v1/geo/earthquakes` endpoint
+- [x] Support filters: magnitude_min, date_range
+- [x] Return GeoJSON with event details
+- [x] Compute population within radius
+- [x] Compute estimated economic impact
+- [x] Compute insurance loss estimates by insurer
 
 #### Frontend Implementation
 - [ ] Integrate map library (Mapbox, Leaflet, or Google Maps)
@@ -750,8 +750,8 @@
   - Insurance loss by insurer
 
 #### Testing
-- [ ] Test GeoJSON formatting
-- [ ] Test impact calculations
+- [x] Test GeoJSON formatting
+- [x] Test impact calculations
 - [ ] Frontend map interaction tests
 
 ---
@@ -763,10 +763,10 @@
 **So that** alerts are appropriate for population/asset exposure
 
 #### Backend Implementation
-- [ ] Create `RegionalThreshold` model
-- [ ] Support geographic region definition (GeoJSON polygons)
-- [ ] Allow magnitude threshold per region
-- [ ] Implement endpoint to preview which events would trigger
+- [x] Create `RegionalThreshold` model
+- [x] Support geographic region definition (GeoJSON polygons)
+- [x] Allow magnitude threshold per region
+- [x] Implement endpoint to preview which events would trigger
 
 #### Frontend Implementation
 - [ ] Build region definition interface (draw on map or select preset)
@@ -775,8 +775,8 @@
 - [ ] Build preview of recent triggering events
 
 #### Testing
-- [ ] Test threshold evaluation by region
-- [ ] Test preview accuracy
+- [x] Test threshold evaluation by region
+- [x] Test preview accuracy
 
 ---
 
@@ -787,11 +787,11 @@
 **So that** I can identify price spikes and congestion
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/geo/power-grid` endpoint
-- [ ] Return LMP data by ISO region (PJM, ERCOT, CAISO, ISO-NE, MISO, SPP, NYISO)
-- [ ] Support historical playback
-- [ ] Include node-level price history
-- [ ] Include renewable generation share overlay
+- [x] Create `GET /api/v1/geo/power-grid` endpoint
+- [x] Return LMP data by ISO region (PJM, ERCOT, CAISO, ISO-NE, MISO, SPP, NYISO)
+- [x] Support historical playback
+- [x] Include node-level price history
+- [x] Include renewable generation share overlay
 
 #### Frontend Implementation
 - [ ] Build map showing ISO regions
@@ -802,7 +802,7 @@
 - [ ] Build renewable share overlay toggle
 
 #### Testing
-- [ ] Test LMP data accuracy
+- [x] Test LMP data accuracy
 - [ ] Test playback functionality
 - [ ] Frontend map rendering tests
 
