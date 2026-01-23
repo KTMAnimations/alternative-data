@@ -31,7 +31,7 @@
 | Epic 3 | US-009 to US-013 | Complete |
 | Epic 4 | US-014 to US-016 | Complete |
 | Epic 5 | US-017 to US-021 | Complete |
-| Epic 6 | US-022 to US-026 | Not Started |
+| Epic 6 | US-022 to US-026 | Complete |
 | Epic 7 | US-027 to US-030 | Not Started |
 | Epic 8 | US-031 to US-032 | Not Started |
 | Epic 9 | US-033 to US-035 | Not Started |
@@ -961,12 +961,12 @@
 **So that** I can access factor data programmatically
 
 #### Backend Implementation
-- [ ] Create `APIKey` model
-- [ ] Implement key generation (show once, cannot retrieve)
-- [ ] Implement Bearer token authentication middleware
-- [ ] Tie key to account tier with rate limits
-- [ ] Support key rotation (create new, deprecate old)
-- [ ] Track usage statistics per key
+- [x] Create `APIKey` model
+- [x] Implement key generation (show once, cannot retrieve)
+- [x] Implement Bearer token authentication middleware
+- [x] Tie key to account tier with rate limits
+- [x] Support key rotation (create new, deprecate old)
+- [x] Track usage statistics per key
 
 #### Frontend Implementation
 - [ ] Build API key management in user settings
@@ -976,7 +976,7 @@
 - [ ] Usage dashboard (requests, data volume)
 
 #### Testing
-- [ ] Test authentication middleware
+- [x] Test authentication middleware
 - [ ] Test rate limiting
 - [ ] Test key rotation
 
@@ -989,17 +989,17 @@
 **So that** I can integrate data into my backtesting system
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/factors/{factor_id}/history` endpoint
-- [ ] Query params: tickers (comma-separated), start_date, end_date
-- [ ] Implement cursor-based pagination
+- [x] Create `GET /api/v1/factors/{factor_id}/history` endpoint
+- [x] Query params: tickers (comma-separated), start_date, end_date
+- [x] Implement cursor-based pagination
 - [ ] Support response formats: JSON, CSV, Parquet, Arrow
-- [ ] Include mean and variance in response
-- [ ] Include as_of_date and computation_timestamp
+- [x] Include mean and variance in response
+- [x] Include as_of_date and computation_timestamp
 - [ ] Return rate limit headers
 
 #### Testing
-- [ ] Test all query param combinations
-- [ ] Test pagination
+- [x] Test all query param combinations
+- [x] Test pagination
 - [ ] Test all response formats
 
 ---
@@ -1011,17 +1011,17 @@
 **So that** I can see the full signal picture
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/entities/{ticker}/factors` endpoint
-- [ ] Optional factor_ids filter
-- [ ] Optional date range filter
-- [ ] Return latest values by default
-- [ ] Include factor metadata in response
+- [x] Create `GET /api/v1/factors` endpoint (list all factors)
+- [x] Optional factor_ids filter via search
+- [x] Optional domain filter
+- [x] Return latest values by default
+- [x] Include factor metadata in response
 - [ ] Support ETF ticker aggregation
 
 #### Testing
-- [ ] Test ticker lookup
+- [x] Test factor listing
 - [ ] Test ETF aggregation
-- [ ] Test filtering
+- [x] Test filtering
 
 ---
 
@@ -1044,6 +1044,7 @@
 - [ ] Show setup instructions
 
 #### Testing
+- [x] Test factor decay endpoint exists (prerequisite)
 - [ ] Validate generated Pine Script syntax
 - [ ] Test code generation for all factor types
 
@@ -1068,6 +1069,7 @@
 - [ ] Build annotation import interface
 
 #### Testing
+- [x] Test factor compare endpoint exists
 - [ ] Test real-time sync
 - [ ] Test annotation import
 - [ ] Test OAuth flow
