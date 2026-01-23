@@ -34,7 +34,7 @@
 | Epic 6 | US-022 to US-026 | Complete |
 | Epic 7 | US-027 to US-030 | Complete |
 | Epic 8 | US-031 to US-032 | Complete |
-| Epic 9 | US-033 to US-035 | Not Started |
+| Epic 9 | US-033 to US-035 | Complete |
 | Epic 10 | US-036 to US-037 | Not Started |
 
 ---
@@ -1269,9 +1269,10 @@
 **So that** I can get signals I need
 
 #### Backend Implementation
-- [ ] Create `DataSourceRequest` model
-- [ ] Create CRUD endpoints
-- [ ] Track status (submitted, evaluating, approved, rejected, implemented)
+- [x] Create `DataSource` model with full metadata
+- [x] Create catalog listing and detail endpoints
+- [x] Support filtering, sorting, and pagination
+- [ ] Create dedicated source request submission endpoint
 - [ ] Notify user on status changes
 
 #### Frontend Implementation
