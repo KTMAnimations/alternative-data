@@ -1,1742 +1,1471 @@
 # Alternative Data Platform - Master Task List
 
-> **Source of Truth** for all implementation tasks across the platform build-out.
-> Generated from comprehensive planning document.
+> **Source of Truth** for all implementation tasks.
+> Aligned with PRD.md user stories and acceptance criteria.
 
 ---
 
 ## Table of Contents
 
-1. [Phase 1: Quick Wins (Free Public APIs)](#phase-1-quick-wins-free-public-apis)
-2. [Phase 2: Government & Regulatory Data](#phase-2-government--regulatory-data)
-3. [Phase 3: Gaming & Entertainment](#phase-3-gaming--entertainment)
-4. [Phase 4: Energy & Commodities](#phase-4-energy--commodities)
-5. [Phase 5: Satellite & Trade Data](#phase-5-satellite--trade-data)
-6. [Phase 6: Infrastructure & VC](#phase-6-infrastructure--vc)
-7. [Phase 7: Entity Mapping & Factor Computation](#phase-7-entity-mapping--factor-computation)
-8. [Phase 8: Platform Integration](#phase-8-platform-integration)
-9. [Phase 9: Commercial Data Expansion](#phase-9-commercial-data-expansion)
-10. [Validation & Testing Framework](#validation--testing-framework)
+1. [Foundation: Data Infrastructure](#foundation-data-infrastructure)
+2. [Epic 1: Data Catalog Discovery](#epic-1-data-catalog-discovery)
+3. [Epic 2: Factor Analysis](#epic-2-factor-analysis)
+4. [Epic 3: Real-Time Monitoring](#epic-3-real-time-monitoring)
+5. [Epic 4: Geographic Visualization](#epic-4-geographic-visualization)
+6. [Epic 5: Backtesting & Research](#epic-5-backtesting--research)
+7. [Epic 6: API Integration](#epic-6-api-integration)
+8. [Epic 7: Entity Mapping](#epic-7-entity-mapping)
+9. [Epic 8: Disaster & Event Signals](#epic-8-disaster--event-signals)
+10. [Epic 9: Data Catalog Management](#epic-9-data-catalog-management)
+11. [Epic 10: User Management & Tiers](#epic-10-user-management--tiers)
 
 ---
 
-## Phase Overview Matrix
+## Progress Summary
 
-| Phase | Focus Area | Tasks | Dependencies | Priority |
-|-------|------------|-------|--------------|----------|
-| **1** | Quick Wins (Free APIs) | 8 data sources | None | Highest |
-| **2** | Government Data | 4 data sources | Phase 1 patterns | High |
-| **3** | Gaming & Entertainment | 4 data sources | Phase 1 patterns | High |
-| **4** | Energy & Commodities | 5 data sources | Phase 1 patterns | High |
-| **5** | Satellite & Trade | 4 data sources | Phase 2-4 patterns | Medium |
-| **6** | Infrastructure & VC | 3 data sources | Phase 1-5 patterns | Medium |
-| **7** | Entity Mapping & Factors | 4 mapping systems | All Phase 1-6 data | High |
-| **8** | Platform Integration | 4 UI components | All prior phases | Medium |
-| **9** | Commercial Expansion | 6+ data sources | Platform complete | Low |
+| Epic | User Stories | Status |
+|------|--------------|--------|
+| Foundation | 8 data sources | Not Started |
+| Epic 1 | US-001 to US-004 | Not Started |
+| Epic 2 | US-005 to US-008 | Not Started |
+| Epic 3 | US-009 to US-013 | Not Started |
+| Epic 4 | US-014 to US-016 | Not Started |
+| Epic 5 | US-017 to US-021 | Not Started |
+| Epic 6 | US-022 to US-026 | Not Started |
+| Epic 7 | US-027 to US-030 | Not Started |
+| Epic 8 | US-031 to US-032 | Not Started |
+| Epic 9 | US-033 to US-035 | Not Started |
+| Epic 10 | US-036 to US-037 | Not Started |
 
 ---
 
-## Phase 1: Quick Wins (Free Public APIs)
+## Foundation: Data Infrastructure
 
-**Goal**: Establish data collection patterns with free, publicly available APIs.
-**Estimated Tasks**: 8 data sources, ~40 subtasks
+**Goal**: Implement Phase 1 data sources (8 free APIs) that power all platform features.
 **Dependencies**: None
-**Validation**: Unit tests, data quality checks
+**Required for**: All Epics
 
 ---
 
-### Task 1.1: TSA Checkpoint Data
+### F-001: TSA Checkpoint Data
 
-**Priority**: 1 | **Effort**: Small | **Saturation**: LOW
+**Frequency**: Daily | **Latency**: 12h | **Entities**: DAL, UAL, AAL, LUV, JBLU, JETS
 
-#### 1.1.1 Data Acquisition
+#### Data Acquisition
 - [ ] Research TSA.gov page structure at `https://www.tsa.gov/travel/passenger-volumes`
-- [ ] Determine scraping vs API approach (currently webpage scrape)
-- [ ] Test rate limits and access patterns
+- [ ] Test scraping approach and rate limits
 - [ ] Document data format (daily throughput, YoY comparison)
 
-#### 1.1.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/tsa_checkpoint.py`
 - [ ] Inherit from `BaseCollector`
-- [ ] Implement `fetch()` method with requests/BeautifulSoup
-- [ ] Implement `parse()` method to extract daily figures
+- [ ] Implement `fetch()` with requests/BeautifulSoup
+- [ ] Implement `parse()` to extract daily figures
 - [ ] Add error handling for missing days
 - [ ] Implement historical backfill (2019-present)
-- [ ] Register collector in scheduler (daily at 10:00 AM ET)
+- [ ] Register in scheduler (daily at 10:00 AM ET)
 
-#### 1.1.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `TSACheckpoint`
-  - `id`: Integer, primary key
-  - `date`: Date, indexed
-  - `current_year_throughput`: Integer
-  - `prior_year_throughput`: Integer
-  - `yoy_change_pct`: Float
-  - `day_of_week`: Integer (0=Monday, 6=Sunday)
-  - `is_holiday_period`: Boolean
-  - `raw_data_id`: ForeignKey to raw_data_catalog
-  - `created_at`: DateTime
+  - `date`, `current_year_throughput`, `prior_year_throughput`
+  - `yoy_change_pct`, `day_of_week`, `is_holiday_period`
 - [ ] Create composite index on (date, day_of_week)
-- [ ] Generate Alembic migration
-- [ ] Run migration and verify schema
+- [ ] Generate and run Alembic migration
 
-#### 1.1.4 Factor Implementation
-- [ ] Implement `TSAThroughputMomentum` factor
-  - 7-day rolling average vs same period prior year
-  - Register with `@FactorRegistry.register`
-  - Target entities: DAL, UAL, AAL, LUV, JBLU, JETS
-- [ ] Implement `TSAWeekdayWeekendRatio` factor
-  - Weekday avg / weekend avg (14-day lookback)
-  - Signal for business vs leisure travel mix
-  - Target entities: DAL, UAL (business heavy)
-- [ ] Implement `TSAAirlineEnplanementNowcast` factor
-  - Monthly TSA total × 0.97 correlation coefficient
-  - Estimate monthly enplanements before BTS release
+#### Factors
+- [ ] `TSAThroughputMomentum`: 7d rolling avg vs prior year
+- [ ] `TSAWeekdayWeekendRatio`: Business vs leisure travel mix
+- [ ] `TSAAirlineEnplanementNowcast`: Monthly enplanement estimate
 
-#### 1.1.5 Entity Mapping
-- [ ] Create direct ticker mapping for airlines
-  - High correlation: DAL, UAL, AAL, LUV, JBLU
-  - Sector ETF: JETS
-  - Secondary (travel-related): MAR, HLT
-
-#### 1.1.6 Testing & Validation
-- [ ] Write unit tests for collector
-- [ ] Write unit tests for each factor
-- [ ] Validate daily throughput in range 1M-4M
+#### Testing
+- [ ] Unit tests for collector and factors
+- [ ] Validate throughput in range 1M-4M
 - [ ] Verify no data gaps > 1 day
-- [ ] Backtest factor correlation with airline returns (target > 0.3)
-- [ ] Verify data arrives by 10am ET daily
 
 ---
 
-### Task 1.2: OpenTable Reservations
+### F-002: OpenTable Reservations
 
-**Priority**: 1 | **Effort**: Medium | **Saturation**: LOW
+**Frequency**: Weekly | **Latency**: 2d | **Entities**: DRI, MCD, SBUX, CMG, YUM
 
-#### 1.2.1 Data Acquisition
-- [ ] Research OpenTable State of Industry page at `https://www.opentable.com/c/state-of-industry/`
+#### Data Acquisition
+- [ ] Research OpenTable State of Industry page
 - [ ] Identify JavaScript-rendered content requiring Playwright
 - [ ] Map available metrics (YoY seated diners by region)
-- [ ] Document weekly update schedule (Mondays)
 
-#### 1.2.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/opentable.py`
-- [ ] Install/configure Playwright dependencies
-- [ ] Implement headless browser scraping
+- [ ] Implement Playwright headless browser scraping
 - [ ] Parse regional breakdown (US, UK, Germany, Australia, Canada)
-- [ ] Parse city-level data if available
-- [ ] Handle anti-bot measures appropriately
-- [ ] Register collector in scheduler (weekly on Tuesday)
+- [ ] Handle anti-bot measures
+- [ ] Register in scheduler (weekly on Tuesday)
 - [ ] Implement historical backfill (2020-present)
 
-#### 1.2.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `OpenTableMetrics`
-  - `id`: Integer, primary key
-  - `week_ending`: Date, indexed
-  - `region`: String (US, UK, Germany, etc.)
-  - `city`: String (nullable for national level)
-  - `yoy_seated_diners_pct`: Float
-  - `raw_data_id`: ForeignKey
-  - `created_at`: DateTime
+  - `week_ending`, `region`, `city`, `yoy_seated_diners_pct`
 - [ ] Create composite index on (week_ending, region)
-- [ ] Create unique constraint on (week_ending, region, city)
 - [ ] Generate and run Alembic migration
 
-#### 1.2.4 Factor Implementation
-- [ ] Implement `SeatedDinersMomentum` factor
-  - Week-over-week change in YoY seated diners percentage
-  - Signal: accelerating/decelerating dining demand
-- [ ] Implement `RegionalDiningSpread` factor
-  - Max - min YoY percentage across major regions
-  - Signal: uneven economic recovery
-- [ ] Implement `RestaurantSectorHealth` factor
-  - 4-week rolling average, normalized 0-100 scale
-  - Composite sector health indicator
+#### Factors
+- [ ] `SeatedDinersMomentum`: WoW change in YoY seated diners
+- [ ] `RegionalDiningSpread`: Max-min YoY across regions
+- [ ] `RestaurantSectorHealth`: 4-week rolling avg (0-100)
 
-#### 1.2.5 Entity Mapping
-- [ ] Map US seated diners to restaurant tickers
-  - DRI, MCD, SBUX, CMG, YUM (high strength)
-- [ ] Map experiential dining growth to fine dining segment
-- [ ] Map regional spread to regional restaurant REITs
-
-#### 1.2.6 Testing & Validation
-- [ ] Write unit tests for Playwright scraper
-- [ ] Write unit tests for each factor
-- [ ] Validate YoY percentage in range -100% to +200%
-- [ ] Verify all major regions captured weekly
-- [ ] Backtest factor correlation with DRI earnings (target > 0.4)
-- [ ] Verify data arrives by Tuesday each week
+#### Testing
+- [ ] Unit tests for Playwright scraper
+- [ ] Validate YoY in range -100% to +200%
+- [ ] Backtest correlation with DRI earnings
 
 ---
 
-### Task 1.3: USGS Earthquake API
+### F-003: USGS Earthquake API
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: NOVEL
+**Frequency**: Continuous | **Latency**: 15min | **Real-Time**: Yes | **Entities**: ALL, TRV, CB, PGR
 
-#### 1.3.1 Data Acquisition
-- [ ] Review USGS API documentation at `https://earthquake.usgs.gov/fdsnws/event/1/`
-- [ ] Test API endpoints (GeoJSON format)
-- [ ] Document query parameters (magnitude, location, time range)
-- [ ] Verify no authentication required
+#### Data Acquisition
+- [ ] Review USGS API at `https://earthquake.usgs.gov/fdsnws/event/1/`
+- [ ] Test GeoJSON endpoints
+- [ ] Document query parameters
 
-#### 1.3.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/usgs_earthquake.py`
 - [ ] Implement REST API client
-- [ ] Query parameters: minmagnitude=4.0, format=geojson
-- [ ] Parse event data (magnitude, location, depth, timestamp)
-- [ ] Handle pagination for historical bulk loads
-- [ ] Register collector (continuous polling, 15-minute intervals)
-- [ ] Implement historical backfill (configurable depth)
+- [ ] Query params: minmagnitude=4.0, format=geojson
+- [ ] Parse magnitude, location, depth, timestamp
+- [ ] Register for continuous polling (15-min intervals)
+- [ ] Implement historical backfill
 
-#### 1.3.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `EarthquakeEvent`
-  - `id`: Integer, primary key
-  - `event_id`: String, unique (USGS ID)
-  - `timestamp`: DateTime, indexed
-  - `latitude`: Float
-  - `longitude`: Float
-  - `depth_km`: Float
-  - `magnitude`: Float
-  - `magnitude_type`: String (ml, mb, mw)
-  - `place_description`: String
-  - `felt_reports`: Integer
-  - `tsunami_flag`: Boolean
-  - `raw_data_id`: ForeignKey
+  - `event_id`, `timestamp`, `latitude`, `longitude`
+  - `depth_km`, `magnitude`, `magnitude_type`
+  - `place_description`, `felt_reports`, `tsunami_flag`
 - [ ] Generate and run Alembic migration
 
-#### 1.3.4 Factor Implementation
-- [ ] Implement `SeismicRiskExposure` factor
-  - Company asset proximity to seismic events
-  - Requires asset location database (future enhancement)
-- [ ] Implement `DisasterImpactEstimate` factor
-  - Modeled economic damage from magnitude + population
-  - Insurance claims predictor
+#### Factors
+- [ ] `SeismicRiskExposure`: Asset proximity to events
+- [ ] `DisasterImpactEstimate`: Economic damage + insurer loss model
 
-#### 1.3.5 Entity Mapping
-- [ ] Map seismic events to insurance stocks: ALL, TRV, CB, PGR
-- [ ] Map to regional REITs by event location
-- [ ] Map to semiconductor fabs (TSMC Taiwan exposure)
-
-#### 1.3.6 Testing & Validation
-- [ ] Write unit tests for API client
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for API client
 - [ ] Verify data arrives within 15 minutes of event
-- [ ] Validate magnitude values are reasonable (0-10 scale)
-- [ ] Test historical backfill accuracy
+- [ ] Validate magnitude values (0-10 scale)
 
 ---
 
-### Task 1.4: UK Carbon Intensity API
+### F-004: UK Carbon Intensity API
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: NOVEL
+**Frequency**: 30min | **Latency**: 30min | **Entities**: NG.L, SSE.L
 
-#### 1.4.1 Data Acquisition
-- [ ] Review API documentation at `https://carbonintensity.org.uk/`
+#### Data Acquisition
+- [ ] Review API at `https://carbonintensity.org.uk/`
 - [ ] Test endpoints: `/intensity`, `/generation`, `/regional`
 - [ ] Verify no authentication required
-- [ ] Document 30-minute interval data format
 
-#### 1.4.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/carbon_intensity.py`
-- [ ] Implement REST API client
 - [ ] Fetch national and regional intensity data
-- [ ] Fetch generation mix breakdown (biomass, coal, gas, nuclear, solar, wind)
+- [ ] Fetch generation mix (biomass, coal, gas, nuclear, solar, wind)
 - [ ] Register collector (30-minute intervals)
 - [ ] Implement historical backfill (2018-present)
 
-#### 1.4.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `CarbonIntensityReading`
-  - `id`: Integer, primary key
-  - `timestamp`: DateTime, indexed
-  - `region`: String (UK national or regional code)
-  - `intensity_forecast`: Integer (gCO2/kWh)
-  - `intensity_actual`: Integer
-  - `intensity_index`: String (very low, low, moderate, high, very high)
-  - `generation_mix`: JSON ({"biomass": %, "coal": %, ...})
-  - `raw_data_id`: ForeignKey
+  - `timestamp`, `region`, `intensity_forecast`, `intensity_actual`
+  - `intensity_index`, `generation_mix` (JSON)
 - [ ] Generate and run Alembic migration
 
-#### 1.4.4 Factor Implementation
-- [ ] Implement `CarbonIntensityTrend` factor
-  - Month-over-month carbon intensity change
-  - Signal: grid decarbonization progress
-- [ ] Implement `RenewableShareGrowth` factor
-  - % renewable in generation mix trend
-  - Signal: energy transition momentum
+#### Factors
+- [ ] `CarbonIntensityTrend`: MoM carbon intensity change
+- [ ] `RenewableShareGrowth`: % renewable trend
 
-#### 1.4.5 Entity Mapping
-- [ ] Map to UK utilities: NG.L, SSE.L
-- [ ] Map to ESG-focused ETFs
-- [ ] Map to carbon credit markets (future)
-
-#### 1.4.6 Testing & Validation
-- [ ] Write unit tests for API client
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for API client
 - [ ] Verify 30-minute data intervals
-- [ ] Validate intensity values reasonable (0-500 gCO2/kWh range)
+- [ ] Validate intensity values (0-500 gCO2/kWh)
 
 ---
 
-### Task 1.5: FRED Building Permits
+### F-005: FRED Building Permits
 
-**Priority**: 1 | **Effort**: Small | **Saturation**: LOW
+**Frequency**: Monthly | **Latency**: 3wk | **Entities**: DHI, LEN, PHM, HD, LOW
 
-#### 1.5.1 Data Acquisition
+#### Data Acquisition
 - [ ] Review FRED API for PERMIT series
-- [ ] Identify related series: PERMITNSA, regional permits
+- [ ] Identify related series (PERMITNSA, regional)
 - [ ] Verify FRED API key configuration
-- [ ] Document monthly release schedule (~3 weeks after month end)
 
-#### 1.5.2 Collector Implementation
-- [ ] Extend existing `src/collectors/fred_collector.py`
-- [ ] Add PERMIT series to collection list
-- [ ] Add PERMITNSA (non-seasonally adjusted)
-- [ ] Add regional permit series (PERMIT1, PERMIT2, etc.)
-- [ ] Verify historical backfill (1960-present available)
+#### Collector Implementation
+- [ ] Extend `src/collectors/fred_collector.py`
+- [ ] Add PERMIT, PERMITNSA series
+- [ ] Add regional permit series
+- [ ] Verify historical backfill (1960-present)
 
-#### 1.5.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `BuildingPermitData`
-  - `id`: Integer, primary key
-  - `period`: Date, indexed
-  - `geography_level`: String (national, state, county, place)
-  - `geography_code`: String
-  - `geography_name`: String
-  - `permit_type`: String (total, single_family, multi_family)
-  - `units_authorized`: Integer
-  - `valuation`: Numeric(15,2)
-  - `raw_data_id`: ForeignKey
+  - `period`, `geography_level`, `geography_code`
+  - `permit_type`, `units_authorized`, `valuation`
 - [ ] Generate and run Alembic migration
 
-#### 1.5.4 Factor Implementation
-- [ ] Implement `PermitMomentum` factor
-  - Month-over-month change in permit volume
-  - Signal: construction pipeline strength
-- [ ] Implement `PermitToStartRatio` factor
-  - Permits issued / housing starts begun
-  - Signal: builder confidence/execution gap
-- [ ] Implement `RenovationShareIndex` factor
-  - Renovation permits / new construction permits
-  - Signal: market maturity indicator
+#### Factors
+- [ ] `PermitMomentum`: MoM change in permit volume
+- [ ] `PermitToStartRatio`: Permits / housing starts
+- [ ] `RenovationShareIndex`: Renovation / new construction
 
-#### 1.5.5 Entity Mapping
-- [ ] Map national permits to homebuilders: DHI, LEN, PHM, TOL, NVR
-- [ ] Map regional permits to regional homebuilders
-- [ ] Map renovation share to home improvement: HD, LOW
-
-#### 1.5.6 Testing & Validation
-- [ ] Write unit tests for extended FRED collector
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for extended FRED collector
 - [ ] Verify monthly data freshness
 - [ ] Validate permit values against Census BPS
 
 ---
 
-### Task 1.6: Movie Box Office (TheNumbers)
+### F-006: Movie Box Office
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: LOW
+**Frequency**: Daily | **Latency**: 1d | **Entities**: DIS, WBD, PARA, CMCSA, SONY
 
-#### 1.6.1 Data Acquisition
-- [ ] Research TheNumbers page structure at `https://www.the-numbers.com/box-office-chart/daily`
-- [ ] Map available data: daily gross, theater count, per-screen average
-- [ ] Identify weekend vs daily chart differences
-- [ ] Document update schedule (daily)
+#### Data Acquisition
+- [ ] Research TheNumbers page at `https://www.the-numbers.com/box-office-chart/daily`
+- [ ] Map available data (daily gross, theater count)
+- [ ] Document update schedule
 
-#### 1.6.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/boxoffice.py`
-- [ ] Implement web scraper for daily charts
-- [ ] Implement web scraper for weekend charts
+- [ ] Implement web scraper for daily/weekend charts
 - [ ] Parse movie title, distributor, gross, theaters
 - [ ] Handle cumulative gross tracking
 - [ ] Register collector (daily)
 - [ ] Implement historical backfill (1995-present)
 
-#### 1.6.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `BoxOfficeDaily`
-  - `id`: Integer, primary key
-  - `date`: Date, indexed
-  - `movie_title`: String
-  - `distributor`: String
-  - `distributor_ticker`: String, indexed
-  - `daily_gross`: Numeric(15,2)
-  - `cumulative_gross`: Numeric(15,2)
-  - `theater_count`: Integer
-  - `per_theater_avg`: Numeric(10,2)
-  - `days_in_release`: Integer
-  - `raw_data_id`: ForeignKey
+  - `date`, `movie_title`, `distributor`, `distributor_ticker`
+  - `daily_gross`, `cumulative_gross`, `theater_count`
+  - `per_theater_avg`, `days_in_release`
 - [ ] Generate and run Alembic migration
 
-#### 1.6.4 Factor Implementation
-- [ ] Implement `OpeningWeekendSurprise` factor
-  - Actual gross vs tracking estimates (requires estimate source)
-  - Signal: earnings surprise proxy
-- [ ] Implement `StudioMarketShare` factor
-  - Studio gross / total market gross
-  - Signal: competitive position
+#### Factors
+- [ ] `OpeningWeekendSurprise`: Actual vs forecast
+- [ ] `StudioMarketShare`: Studio gross / total market
 
-#### 1.6.5 Entity Mapping (Task 7.3 dependency)
-- [ ] Create studio-to-ticker mapping table
-  - Disney → DIS
-  - Warner Bros → WBD
-  - Paramount → PARA
-  - Universal → CMCSA
-  - Sony Pictures → SONY
-  - Lionsgate → LGF.A
+#### Entity Mapping
+- [ ] Create studio-to-ticker mapping (Disney→DIS, Warner→WBD, etc.)
 
-#### 1.6.6 Testing & Validation
-- [ ] Write unit tests for scraper
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for scraper
 - [ ] Verify daily data freshness
-- [ ] Validate gross values are reasonable
 - [ ] Cross-reference with public announcements
 
 ---
 
-### Task 1.7: Cloudflare Radar API
+### F-007: Cloudflare Radar API
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: NOVEL
+**Frequency**: Hourly | **Latency**: 1h | **Real-Time**: Yes | **Entities**: NET, CRWD, PANW, ZS
 
-#### 1.7.1 Data Acquisition
+#### Data Acquisition
 - [ ] Review Cloudflare Radar API documentation
 - [ ] Register for free API token
 - [ ] Test endpoints: `/traffic`, `/attacks`, `/outages`
-- [ ] Document rate limits
 
-#### 1.7.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/cloudflare_radar.py`
-- [ ] Implement REST API client with authentication
-- [ ] Fetch global traffic volumes
-- [ ] Fetch attack/DDoS trends
-- [ ] Fetch outage data
+- [ ] Implement REST API client with auth
+- [ ] Fetch global traffic, attack trends, outage data
 - [ ] Register collector (hourly)
 
-#### 1.7.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `CloudflareRadarMetrics`
-  - `id`: Integer, primary key
-  - `timestamp`: DateTime, indexed
-  - `metric_type`: String (traffic, attacks, outages)
-  - `region`: String (global or country code)
-  - `value`: Float
-  - `metadata`: JSON
-  - `raw_data_id`: ForeignKey
+  - `timestamp`, `metric_type`, `region`, `value`, `metadata` (JSON)
 - [ ] Generate and run Alembic migration
 
-#### 1.7.4 Factor Implementation
-- [ ] Implement `TrafficAnomalyIndex` factor
-  - Deviation from baseline traffic
-  - Signal: internet outage/disruption detection
-- [ ] Implement `SecurityThreatLevel` factor
-  - DDoS attack volume trends
-  - Signal: cybersecurity spend driver
+#### Factors
+- [ ] `TrafficAnomalyIndex`: Deviation from baseline
+- [ ] `SecurityThreatLevel`: DDoS attack volume trends
 
-#### 1.7.5 Testing & Validation
-- [ ] Write unit tests for API client
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for API client
 - [ ] Verify hourly data collection
 - [ ] Validate anomaly detection accuracy
 
 ---
 
-### Task 1.8: Zillow Rental Data
+### F-008: Zillow Rental Data
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: LOW
+**Frequency**: Monthly | **Latency**: 1mo | **Entities**: EQR, AVB, MAA, INVH, AMH
 
-#### 1.8.1 Data Acquisition
-- [ ] Review Zillow Research data downloads at `https://www.zillow.com/research/data/`
-- [ ] Identify ZORI (Zillow Observed Rent Index) CSV files
-- [ ] Map available geographic levels (national, metro, zip)
-- [ ] Document monthly release schedule
+#### Data Acquisition
+- [ ] Review Zillow Research data at `https://www.zillow.com/research/data/`
+- [ ] Identify ZORI CSV files
+- [ ] Map geographic levels (national, metro, zip)
 
-#### 1.8.2 Collector Implementation
+#### Collector Implementation
 - [ ] Create `src/collectors/zillow_rental.py`
 - [ ] Implement CSV download and parsing
 - [ ] Handle multiple geographic granularities
 - [ ] Register collector (monthly)
 - [ ] Implement historical backfill (2015-present)
 
-#### 1.8.3 Data Model
+#### Data Model
 - [ ] Create SQLAlchemy model `ZillowRentalIndex`
-  - `id`: Integer, primary key
-  - `period`: Date, indexed
-  - `geography_level`: String (national, metro, zip)
-  - `geography_id`: String
-  - `geography_name`: String
-  - `zori_value`: Float (rent index)
-  - `mom_change_pct`: Float
-  - `yoy_change_pct`: Float
-  - `raw_data_id`: ForeignKey
+  - `period`, `geography_level`, `geography_id`, `geography_name`
+  - `zori_value`, `mom_change_pct`, `yoy_change_pct`
 - [ ] Generate and run Alembic migration
 
-#### 1.8.4 Factor Implementation
-- [ ] Implement `RentInflationIndex` factor
-  - ZORI YoY change
-  - Signal: CPI housing component leading indicator
-- [ ] Implement `SFRMultifamilySpread` factor
-  - Single-family rent vs apartment rent differential
-  - Signal: housing type preference
+#### Factors
+- [ ] `RentInflationIndex`: ZORI YoY change (CPI leading indicator)
+- [ ] `SFRMultifamilySpread`: Single-family vs apartment rent differential
 
-#### 1.8.5 Entity Mapping
-- [ ] Map to apartment REITs: EQR, AVB, MAA
-- [ ] Map to SFR REITs: INVH, AMH
-- [ ] Map to homebuilders with SFR exposure
-
-#### 1.8.6 Testing & Validation
-- [ ] Write unit tests for CSV parser
-- [ ] Write unit tests for factors
+#### Testing
+- [ ] Unit tests for CSV parser
 - [ ] Verify monthly data freshness
 - [ ] Validate index values reasonable
 
 ---
 
-## Phase 2: Government & Regulatory Data
+## Epic 1: Data Catalog Discovery
 
-**Goal**: Implement government procurement and regulatory data sources.
-**Estimated Tasks**: 4 data sources, ~25 subtasks
-**Dependencies**: Phase 1 patterns established
-**Validation**: Entity mapping validation, contract value checks
+**Goal**: Enable users to browse, search, and preview available data sources.
 
 ---
 
-### Task 2.1: FPDS Federal Contracts
+### US-001: Browse Available Data Sources
 
-**Priority**: 1 | **Effort**: Large | **Saturation**: LOW
+**As a** fundamental analyst
+**I want to** browse all available data sources in a searchable catalog
+**So that** I can discover new alternative data relevant to my coverage universe
 
-#### 2.1.1 Data Acquisition
-- [ ] Register for FPDS.gov account
-- [ ] Review ATOM feed documentation
-- [ ] Test bulk download endpoints
-- [ ] Document data dictionary (contract fields)
-- [ ] Understand 24-48 hour posting delay
+#### Backend Implementation
+- [ ] Create `DataSource` model with fields:
+  - `name`, `description`, `category`, `update_frequency`
+  - `latency`, `coverage`, `saturation_level`, `date_range`
+- [ ] Create FastAPI endpoint `GET /api/v1/catalog/sources`
+- [ ] Implement filtering by category (travel, real estate, energy, gaming, government, infrastructure)
+- [ ] Implement filtering by frequency (continuous, hourly, daily, weekly, monthly)
+- [ ] Implement keyword search in name and description
+- [ ] Implement sorting by saturation, freshness, coverage
 
-#### 2.1.2 Collector Implementation
-- [ ] Create `src/collectors/fpds.py`
-- [ ] Implement ATOM feed parser for incremental updates
-- [ ] Implement bulk download handler for historical data
-- [ ] Parse all contract fields (vendor, agency, value, dates, PSC, NAICS)
-- [ ] Handle contract modifications (deduplication)
-- [ ] Register collector (daily incremental)
-- [ ] Implement historical backfill strategy (50M+ contracts)
+#### Frontend Implementation
+- [ ] Build catalog listing page component
+- [ ] Build filter sidebar with category/frequency checkboxes
+- [ ] Build search input with debounced queries
+- [ ] Build sort dropdown
+- [ ] Display data availability date range on each card
 
-#### 2.1.3 Data Model
-- [ ] Create SQLAlchemy model `GovernmentContract`
-  - `contract_id`: String, unique
-  - `vendor_duns`: String, indexed
-  - `vendor_uei`: String, indexed
-  - `vendor_name`: String
-  - `vendor_address_state`: String(2)
-  - `awarding_agency_code`: String
-  - `awarding_agency_name`: String
-  - `contract_value`: Numeric(15,2)
-  - `base_value`: Numeric(15,2)
-  - `options_value`: Numeric(15,2)
-  - `award_date`: Date, indexed
-  - `performance_start`: Date
-  - `performance_end`: Date
-  - `product_service_code`: String
-  - `naics_code`: String
-  - `contract_type`: String
-  - `ticker`: String, indexed (mapped)
-  - `sector`: String
-- [ ] Create composite indexes for common queries
-- [ ] Generate and run Alembic migration
-
-#### 2.1.4 Factor Implementation
-- [ ] Implement `ContractWinMomentum` factor
-  - YoY change in contract value won (TTM)
-  - Signal: revenue predictor for gov contractors
-- [ ] Implement `NewMegaContractAlert` factor
-  - Contract value > 2σ from company historical mean
-  - Signal: lumpy revenue event
-- [ ] Implement `GovernmentRevenueExposure` factor
-  - TTM contract value (proxy for gov revenue)
-- [ ] Implement `AgencyConcentrationRisk` factor
-  - Herfindahl index by awarding agency
-  - Signal: customer concentration risk
-
-#### 2.1.5 Testing & Validation
-- [ ] Write unit tests for ATOM parser
-- [ ] Write unit tests for factors
-- [ ] Validate 95% of top 25 contractors mapped
-- [ ] Verify contract values in reasonable ranges
-- [ ] Ensure no future-dated awards
-- [ ] Backtest factor IC > 0.02 for LMT, RTX
+#### Testing
+- [ ] API endpoint tests for all filter combinations
+- [ ] Frontend component tests
+- [ ] E2E test for catalog browse flow
 
 ---
 
-### Task 2.2: USAspending.gov
+### US-002: AI-Powered Data Discovery
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: LOW
+**As a** data scientist
+**I want to** ask natural language questions like "show me consumer spending signals"
+**So that** I can quickly find relevant data without knowing exact source names
 
-#### 2.2.1 Data Acquisition
-- [ ] Review USAspending API documentation
-- [ ] Test download/API endpoints
-- [ ] Understand relationship to FPDS (aggregation)
-- [ ] Document available data beyond FPDS
+#### Backend Implementation
+- [ ] Create `POST /api/v1/catalog/search/semantic` endpoint
+- [ ] Integrate LLM for query interpretation
+- [ ] Implement vector similarity search on source descriptions
+- [ ] Return ranked sources with relevance explanation
+- [ ] Implement related source suggestions based on query intent
+- [ ] Store recent searches per user
 
-#### 2.2.2 Collector Implementation
-- [ ] Create `src/collectors/usaspending.py`
-- [ ] Implement API client
-- [ ] Focus on data not in FPDS (grants, loans)
-- [ ] Register collector (weekly)
+#### Frontend Implementation
+- [ ] Build natural language search input in catalog header
+- [ ] Display results with "Why this matches" explanation
+- [ ] Show "Related sources" section
+- [ ] Build recent searches dropdown
 
-#### 2.2.3 Data Model
-- [ ] Create or extend government spending models
-- [ ] Generate Alembic migration
-
-#### 2.2.4 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate data completeness
-
----
-
-### Task 2.3: Congressional Trading
-
-**Priority**: 2 | **Effort**: Medium | **Saturation**: MEDIUM
-
-#### 2.3.1 Data Acquisition
-- [ ] Research Capitol Trades, Quiver Quant, or SEC filings
-- [ ] Identify data sources for congressional trades
-- [ ] Document disclosure timing (45 days)
-
-#### 2.3.2 Collector Implementation
-- [ ] Create `src/collectors/congressional_trades.py`
-- [ ] Implement data collection (scraping or API)
-- [ ] Parse trade details (member, ticker, date, amount, type)
-- [ ] Register collector (daily)
-
-#### 2.3.3 Data Model
-- [ ] Create SQLAlchemy model `CongressionalTrade`
-- [ ] Generate Alembic migration
-
-#### 2.3.4 Factor Implementation
-- [ ] Implement `CongressTradeAlert` factor
-  - Flag significant congressional trades
-  - Signal: political information edge
-
-#### 2.3.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate trade data accuracy
+#### Testing
+- [ ] Test semantic search accuracy with sample queries
+- [ ] Test explanation generation
+- [ ] Frontend component tests
 
 ---
 
-### Task 2.4: FCC Cell Tower Data
+### US-003: Preview Sample Data
 
-**Priority**: 3 | **Effort**: Medium | **Saturation**: NOVEL
+**As a** quant PM
+**I want to** preview sample data for any source with interactive date selection
+**So that** I can evaluate data quality before integrating
 
-#### 2.4.1 Data Acquisition
-- [ ] Review FCC Universal Licensing System
-- [ ] Research OpenCelliD database
-- [ ] Document tower permit/registration process
+#### Backend Implementation
+- [ ] Create `GET /api/v1/catalog/sources/{source_id}/preview` endpoint
+- [ ] Accept query params: `start_date`, `end_date`, `ticker`, `limit`
+- [ ] Return data quality indicators (completeness, freshness)
+- [ ] Support export formats: CSV, Parquet, Arrow
+- [ ] Return row count and basic statistics
 
-#### 2.4.2 Collector Implementation
-- [ ] Create `src/collectors/fcc_towers.py`
-- [ ] Implement data collection from FCC ULS
-- [ ] Parse tower registrations and permits
-- [ ] Register collector (weekly)
+#### Frontend Implementation
+- [ ] Build interactive date range picker
+- [ ] Build sortable, filterable data table
+- [ ] Display quality indicators (completeness %, last updated)
+- [ ] Build entity/ticker filter
+- [ ] Build export buttons (CSV, Parquet, Arrow)
+- [ ] Show row count and stats summary
 
-#### 2.4.3 Data Model
-- [ ] Create SQLAlchemy model for cell tower data
-- [ ] Generate Alembic migration
-
-#### 2.4.4 Factor Implementation
-- [ ] Implement `TowerPermitVelocity` factor
-  - New permits filed per month
-  - Signal: telecom capex deployment
-- [ ] Implement `5GCoverageExpansion` factor
-  - New 5G sites / total sites ratio
-
-#### 2.4.5 Entity Mapping
-- [ ] Map to carriers: T, VZ, TMUS
-- [ ] Map to tower REITs: AMT, CCI, SBAC
-
-#### 2.4.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate permit counts
+#### Testing
+- [ ] API tests for date range queries
+- [ ] Test export functionality
+- [ ] Frontend table interaction tests
 
 ---
 
-## Phase 3: Gaming & Entertainment
+### US-004: View Source Metadata
 
-**Goal**: Capture gaming engagement metrics for publisher revenue signals.
-**Estimated Tasks**: 4 data sources, ~20 subtasks
-**Dependencies**: Phase 1 patterns
-**Validation**: Publisher revenue correlation
+**As a** analyst
+**I want to** see comprehensive metadata for each data source
+**So that** I understand data characteristics before use
 
----
+#### Backend Implementation
+- [ ] Create `GET /api/v1/catalog/sources/{source_id}` endpoint
+- [ ] Return full metadata including:
+  - Name, description, collection frequency, typical latency
+  - Geographic coverage, entity coverage, date range
+  - Saturation level, sample API code snippets
+  - List of derived factors
 
-### Task 3.1: Twitch API
+#### Frontend Implementation
+- [ ] Build source detail page
+- [ ] Display metadata in organized sections
+- [ ] Show sample code snippets with copy button
+- [ ] List derived factors with links to factor detail
 
-**Priority**: 1 | **Effort**: Small | **Saturation**: LOW
-
-#### 3.1.1 Data Acquisition
-- [ ] Register Twitch Developer application
-- [ ] Obtain OAuth Client Credentials
-- [ ] Review API endpoints: `/games/top`, `/streams`
-- [ ] Document 800 requests/minute rate limit
-
-#### 3.1.2 Collector Implementation
-- [ ] Create `src/collectors/twitch.py`
-- [ ] Implement OAuth authentication
-- [ ] Fetch top 100 games by viewership
-- [ ] Fetch viewer counts, channel counts
-- [ ] Register collector (hourly)
-- [ ] Implement historical aggregation
-
-#### 3.1.3 Data Model
-- [ ] Create SQLAlchemy model `TwitchMetrics`
-  - `timestamp`: DateTime, indexed
-  - `game_name`: String
-  - `publisher_ticker`: String, indexed
-  - `avg_viewers`: Integer
-  - `peak_viewers`: Integer
-  - `channels_broadcasting`: Integer
-- [ ] Generate Alembic migration
-
-#### 3.1.4 Factor Implementation
-- [ ] Implement `TwitchViewerGrowth` factor
-  - Game's avg viewers month-over-month
-  - Signal: game popularity trend
-- [ ] Implement `StreamerMigration` factor
-  - Top streamers switching games
-  - Signal: platform/game shifts
-
-#### 3.1.5 Entity Mapping (Task 7.2 dependency)
-- [ ] Create game-to-publisher mapping
-- [ ] Map publishers to tickers: EA, ATVI, TTWO, UBSFY, RBLX
-
-#### 3.1.6 Testing & Validation
-- [ ] Write unit tests for OAuth flow
-- [ ] Write unit tests for factors
-- [ ] Validate viewer counts reasonable
-- [ ] Backtest correlation with publisher earnings
+#### Testing
+- [ ] API tests for metadata completeness
+- [ ] Frontend rendering tests
 
 ---
 
-### Task 3.2: Steam Charts
+## Epic 2: Factor Analysis
 
-**Priority**: 1 | **Effort**: Small | **Saturation**: LOW
-
-#### 3.2.1 Data Acquisition
-- [ ] Review SteamCharts.com or Steam Web API
-- [ ] Identify concurrent player data availability
-- [ ] Document data format and update frequency
-
-#### 3.2.2 Collector Implementation
-- [ ] Create `src/collectors/steam.py`
-- [ ] Implement data collection (API or scrape)
-- [ ] Fetch concurrent player counts by game
-- [ ] Register collector (daily)
-
-#### 3.2.3 Data Model
-- [ ] Create SQLAlchemy model `SteamMetrics`
-  - `timestamp`: DateTime, indexed
-  - `app_id`: Integer
-  - `game_name`: String
-  - `publisher_ticker`: String, indexed
-  - `concurrent_players`: Integer
-  - `peak_24h`: Integer
-- [ ] Generate Alembic migration
-
-#### 3.2.4 Factor Implementation
-- [ ] Implement `SteamConcurrentPeak` factor
-  - Peak players vs all-time high
-  - Signal: game retention/engagement
-
-#### 3.2.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate player counts
+**Goal**: Enable users to explore, compare, and blend factors.
 
 ---
 
-### Task 3.3: Discord API
+### US-005: Explore Factor Taxonomy Graph
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: LOW
+**As a** data scientist
+**I want to** visualize relationships between factors in a graph view
+**So that** I can understand factor derivation and correlation structure
 
-#### 3.3.1 Data Acquisition
-- [ ] Review Discord API capabilities
-- [ ] Identify public server discovery limitations
-- [ ] Document available metrics
+#### Backend Implementation
+- [ ] Create `Factor` model with relationships
+- [ ] Create `FactorRelationship` model
+  - Types: derived-from, correlated-with, causes, leads, component-of
+- [ ] Create `GET /api/v1/factors/graph` endpoint
+- [ ] Support filtering by relationship type and domain
 
-#### 3.3.2 Collector Implementation
-- [ ] Create `src/collectors/discord.py`
-- [ ] Implement server member tracking (if available)
-- [ ] Register collector (daily)
+#### Frontend Implementation
+- [ ] Integrate graph visualization library (D3, Cytoscape, or React Flow)
+- [ ] Build interactive graph with zoom, pan, cluster controls
+- [ ] Implement node click to expand details panel
+- [ ] Build edge type filter
+- [ ] Build domain filter (travel, real estate, etc.)
+- [ ] Build factor search within graph
 
-#### 3.3.3 Data Model
-- [ ] Create SQLAlchemy model for Discord metrics
-- [ ] Generate Alembic migration
-
-#### 3.3.4 Factor Implementation
-- [ ] Implement `DiscordServerGrowth` factor
-  - New members per week
-  - Signal: community engagement
-
-#### 3.3.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate data accuracy
-
----
-
-### Task 3.4: Kickstarter API
-
-**Priority**: 2 | **Effort**: Medium | **Saturation**: NOVEL
-
-#### 3.4.1 Data Acquisition
-- [ ] Research Kickstarter data access (scraping likely required)
-- [ ] Identify campaign data fields
-- [ ] Document category structure
-
-#### 3.4.2 Collector Implementation
-- [ ] Create `src/collectors/kickstarter.py`
-- [ ] Implement web scraper or API client
-- [ ] Track funding amounts, backer counts, success rates
-- [ ] Register collector (daily)
-
-#### 3.4.3 Data Model
-- [ ] Create SQLAlchemy model `KickstarterCampaign`
-- [ ] Generate Alembic migration
-
-#### 3.4.4 Factor Implementation
-- [ ] Implement `CategoryFundingVelocity` factor
-  - Category $ raised per week
-  - Signal: consumer category interest
-- [ ] Implement `OverfundingRatio` factor
-  - Amount raised / goal
-  - Signal: demand strength
-
-#### 3.4.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate campaign data
+#### Testing
+- [ ] Test graph data structure
+- [ ] Test filter combinations
+- [ ] Frontend interaction tests
 
 ---
 
-## Phase 4: Energy & Commodities
+### US-006: View Factor Documentation
 
-**Goal**: Capture energy markets and commodity price signals.
-**Estimated Tasks**: 5 data sources, ~25 subtasks
-**Dependencies**: Phase 1 patterns
-**Validation**: Price signal backtesting
+**As a** quant PM
+**I want to** see academic-quality documentation for each factor
+**So that** I understand economic rationale and expected performance
 
----
+#### Backend Implementation
+- [ ] Extend `Factor` model with documentation fields:
+  - `formula` (LaTeX), `economic_rationale`, `literature_refs`
+  - `historical_metrics` (IC, IR, t-stat, hit rate)
+  - `decay_analysis`, `target_entities`, `signal_interpretation`
+  - `known_limitations`
+- [ ] Create `GET /api/v1/factors/{factor_id}` endpoint
 
-### Task 4.1: Lumber Futures
+#### Frontend Implementation
+- [ ] Build factor detail page
+- [ ] Render formula with math notation (KaTeX/MathJax)
+- [ ] Display economic rationale paragraphs
+- [ ] Show literature references with clickable links
+- [ ] Build historical metrics table
+- [ ] Build decay analysis chart (IC at 1d, 5d, 10d, 21d, 63d horizons)
+- [ ] List target entities
+- [ ] Document signal interpretation and limitations
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: LOW
-
-#### 4.1.1 Data Acquisition
-- [ ] Research CME lumber futures data access
-- [ ] Review FRED lumber price series
-- [ ] Document available price points
-
-#### 4.1.2 Collector Implementation
-- [ ] Create `src/collectors/lumber_futures.py`
-- [ ] Implement data collection from FRED or CME
-- [ ] Register collector (daily)
-
-#### 4.1.3 Data Model
-- [ ] Create SQLAlchemy model for lumber prices
-- [ ] Generate Alembic migration
-
-#### 4.1.4 Factor Implementation
-- [ ] Implement `LumberFuturesMomentum` factor
-  - 30-day price change
-  - Signal: building material cost trend
-- [ ] Implement `BuilderMarginProxy` factor
-  - Home price / lumber cost ratio
-
-#### 4.1.5 Entity Mapping
-- [ ] Map to homebuilders: DHI, LEN, PHM
-- [ ] Map to timberlands: WY, RYN
-
-#### 4.1.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Backtest correlation with homebuilder margins
+#### Testing
+- [ ] Test LaTeX rendering
+- [ ] Test chart data binding
+- [ ] Frontend rendering tests
 
 ---
 
-### Task 4.2: Manheim Index (Used Cars)
+### US-007: Compare Factors Side-by-Side
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: LOW
+**As a** data scientist
+**I want to** compare multiple factors side-by-side
+**So that** I can evaluate which factors to include in my model
 
-#### 4.2.1 Data Acquisition
-- [ ] Research Manheim MUVVI release schedule
-- [ ] Identify scraping approach for index values
-- [ ] Document mid-month and end-of-month releases
+#### Backend Implementation
+- [ ] Create `POST /api/v1/factors/compare` endpoint
+- [ ] Accept list of factor_ids (max 4)
+- [ ] Compute and return:
+  - Side-by-side performance metrics
+  - Correlation matrix between selected factors
+  - Time-series data for overlaid charts
+  - Statistical significance flags
 
-#### 4.2.2 Collector Implementation
-- [ ] Create `src/collectors/manheim.py`
-- [ ] Implement web scraper for index values
-- [ ] Capture main index, EV index, non-EV index
-- [ ] Register collector (bi-weekly)
+#### Frontend Implementation
+- [ ] Build factor selector (multi-select, max 4)
+- [ ] Build side-by-side metrics comparison table
+- [ ] Build correlation matrix heatmap
+- [ ] Build overlaid time-series chart with date sync
+- [ ] Highlight statistically significant differences
+- [ ] Build "Export as research pack" button
 
-#### 4.2.3 Data Model
-- [ ] Create SQLAlchemy model `ManheimIndex`
-  - `date`: Date, indexed
-  - `muvvi_value`: Float
-  - `ev_index`: Float
-  - `non_ev_index`: Float
-  - `yoy_change_pct`: Float
-  - `mom_change_pct`: Float
-- [ ] Generate Alembic migration
-
-#### 4.2.4 Factor Implementation
-- [ ] Implement `ManheimMomentum` factor
-  - MoM index change
-- [ ] Implement `EVvsICESpread` factor
-  - EV index / non-EV index
-  - Signal: EV demand relative to ICE
-
-#### 4.2.5 Entity Mapping
-- [ ] Map to auto dealers: KMX, AN, LAD
-- [ ] Map to rental: CAR, HTZ
-- [ ] Map to OEMs: F, GM
-
-#### 4.2.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate index values
+#### Testing
+- [ ] Test comparison computation
+- [ ] Test correlation matrix accuracy
+- [ ] Frontend chart synchronization tests
 
 ---
 
-### Task 4.3: ISO Power Grid Data
+### US-008: Blend Factors with Optimization
 
-**Priority**: 1 | **Effort**: Medium | **Saturation**: LOW
+**As a** quant PM
+**I want to** blend multiple factors with optimized weights
+**So that** I can create composite signals
 
-#### 4.3.1 Data Acquisition
-- [ ] Research PJM Dataminer API
-- [ ] Research ERCOT data products
-- [ ] Research CAISO OASIS
-- [ ] Research ISO-NE Express
-- [ ] Document data formats and access requirements
+#### Backend Implementation
+- [ ] Create `POST /api/v1/factors/blend` endpoint
+- [ ] Accept factor_ids and optimization config:
+  - Objective: max_ic, max_sharpe, min_correlation, multi_objective
+  - Constraints: max_weight, turnover_limits
+- [ ] Implement optimization algorithms
+- [ ] Return optimal weights and blended factor metrics
+- [ ] Create `POST /api/v1/factors/custom` to save blend
 
-#### 4.3.2 Collector Implementation
-- [ ] Create `src/collectors/power_lmp.py`
-- [ ] Implement PJM collector
-- [ ] Implement ERCOT collector
-- [ ] Implement CAISO collector
-- [ ] Implement ISO-NE collector
-- [ ] Register collectors (hourly day-ahead, 5-minute real-time)
+#### Frontend Implementation
+- [ ] Build factor selection interface
+- [ ] Build optimization objective selector
+- [ ] Build constraints configuration form
+- [ ] Display optimization results (weights, metrics)
+- [ ] Build "Save as custom factor" flow
 
-#### 4.3.3 Data Model
-- [ ] Create SQLAlchemy model `LMPPrice`
-  - `timestamp`: DateTime, indexed
-  - `iso`: String (PJM, ERCOT, CAISO, ISONE)
-  - `node_id`: String
-  - `market_type`: String (DAY_AHEAD, REAL_TIME)
-  - `lmp`: Float
-  - `energy_component`: Float
-  - `congestion_component`: Float
-  - `loss_component`: Float
-- [ ] Generate Alembic migration
-
-#### 4.3.4 Factor Implementation
-- [ ] Implement `LMPVolatility` factor
-  - Standard deviation of hourly prices
-- [ ] Implement `LoadSurprise` factor
-  - Actual vs forecasted load
-  - Signal: economic activity proxy
-- [ ] Implement `RenewableShare` factor
-  - % wind/solar in generation mix
-
-#### 4.3.5 Entity Mapping
-- [ ] Map to utilities by ISO region
-- [ ] Map to data center demand (future)
-
-#### 4.3.6 Testing & Validation
-- [ ] Write unit tests for each ISO collector
-- [ ] Validate price data ranges
-- [ ] Verify real-time data freshness
+#### Testing
+- [ ] Test optimization algorithms
+- [ ] Test constraint handling
+- [ ] E2E blend creation flow
 
 ---
 
-### Task 4.4: EIA Natural Gas Storage
+## Epic 3: Real-Time Monitoring
 
-**Priority**: 2 | **Effort**: Small | **Saturation**: MEDIUM
-
-#### 4.4.1 Data Acquisition
-- [ ] Review EIA Weekly Natural Gas Storage Report
-- [ ] Document Thursday 10:30 AM ET release schedule
-- [ ] Identify API or download endpoint
-
-#### 4.4.2 Collector Implementation
-- [ ] Create `src/collectors/eia_natgas.py`
-- [ ] Implement weekly data collection
-- [ ] Capture working gas, injection/withdrawal, regional data
-- [ ] Register collector (weekly on Thursday)
-
-#### 4.4.3 Data Model
-- [ ] Create SQLAlchemy model for natural gas storage
-- [ ] Generate Alembic migration
-
-#### 4.4.4 Factor Implementation
-- [ ] Implement `StorageSurprise` factor
-  - Actual change vs estimate
-- [ ] Implement `StorageVs5YrAvg` factor
-  - Current storage / 5-year average
-
-#### 4.4.5 Entity Mapping
-- [ ] Map to natural gas producers: EQT, AR, CHK
-- [ ] Map to UNG ETF
-
-#### 4.4.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate storage values
+**Goal**: Enable users to configure alerts and subscribe to real-time updates.
 
 ---
 
-### Task 4.5: Container Port TEU
+### US-009: Configure Threshold Alerts
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: MEDIUM
+**As a** fundamental analyst
+**I want to** set alerts when factors cross specific thresholds
+**So that** I'm notified of significant market signals
 
-#### 4.5.1 Data Acquisition
-- [ ] Research Port of LA/Long Beach data
-- [ ] Review World Bank port data
-- [ ] Document release schedules
+#### Backend Implementation
+- [ ] Create `Alert` model:
+  - `factor_id`, `ticker_list`, `threshold_value`
+  - `direction` (above, below, crosses)
+  - `notification_channel` (email, webhook)
+  - `name`, `description`, `enabled`
+- [ ] Create CRUD endpoints for alerts
+- [ ] Implement alert evaluation engine
+- [ ] Implement notification dispatch (email, webhook)
+- [ ] Implement test alert functionality
 
-#### 4.5.2 Collector Implementation
-- [ ] Create `src/collectors/container_ports.py`
-- [ ] Implement data collection for major ports
-- [ ] Track TEU volumes (imports, exports)
-- [ ] Register collector (monthly)
+#### Frontend Implementation
+- [ ] Build alert creation form
+- [ ] Factor dropdown selector
+- [ ] Ticker input (single or list)
+- [ ] Threshold value input
+- [ ] Direction selector
+- [ ] Notification channel selector
+- [ ] Enable/disable toggle
+- [ ] Test alert button
 
-#### 4.5.3 Data Model
-- [ ] Create SQLAlchemy model for port throughput
-- [ ] Generate Alembic migration
-
-#### 4.5.4 Factor Implementation
-- [ ] Implement `PortThroughputGrowth` factor
-  - YoY TEU change
-- [ ] Implement `ImportExportImbalance` factor
-  - Inbound / outbound TEUs
-
-#### 4.5.5 Entity Mapping
-- [ ] Map to logistics: FDX, UPS
-- [ ] Map to import-dependent retailers: AMZN
-
-#### 4.5.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate TEU values
-
----
-
-## Phase 5: Satellite & Trade Data
-
-**Goal**: Implement novel satellite and trade flow data sources.
-**Estimated Tasks**: 4 data sources, ~20 subtasks
-**Dependencies**: Phase 2-4 patterns
-**Validation**: Cross-source validation
+#### Testing
+- [ ] Test alert evaluation logic
+- [ ] Test notification dispatch
+- [ ] E2E alert creation and trigger flow
 
 ---
 
-### Task 5.1: VIIRS Nightlights
+### US-010: Configure Anomaly Detection Alerts
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: NOVEL
+**As a** quant PM
+**I want to** receive alerts when factors show unusual movements
+**So that** I can react to significant market events
 
-#### 5.1.1 Data Acquisition
-- [ ] Review NASA Earth Observations (earthdata.nasa.gov)
-- [ ] Review World Bank Night Lights data
-- [ ] Document VIIRS monthly data format
-- [ ] Understand data access (registration required)
+#### Backend Implementation
+- [ ] Extend `Alert` model for anomaly type
+- [ ] Implement statistical anomaly detection:
+  - Configurable sensitivity (standard deviations)
+  - Baseline period (7d, 30d, 90d rolling)
+- [ ] Implement ML-based anomaly detection option
+- [ ] Create endpoint to list recent anomalies
 
-#### 5.1.2 Collector Implementation
-- [ ] Create `src/collectors/viirs_nightlights.py`
-- [ ] Implement NASA data download
-- [ ] Process satellite imagery (may need specialized libraries)
-- [ ] Aggregate by geography (country, region)
-- [ ] Register collector (monthly)
+#### Frontend Implementation
+- [ ] Build anomaly alert configuration form
+- [ ] Sensitivity slider (std devs)
+- [ ] Baseline period selector
+- [ ] ML option toggle
+- [ ] Recent anomalies display
 
-#### 5.1.3 Data Model
-- [ ] Create SQLAlchemy model for nightlight intensity
-- [ ] Generate Alembic migration
-
-#### 5.1.4 Factor Implementation
-- [ ] Implement `NightLightGrowth` factor
-  - YoY light intensity change
-  - Signal: GDP growth proxy for emerging markets
-
-#### 5.1.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate correlation with official GDP
+#### Testing
+- [ ] Test anomaly detection accuracy
+- [ ] Test ML model integration
 
 ---
 
-### Task 5.2: Tax Lien/Foreclosure Data
+### US-011: Configure Event-Based Alerts
 
-**Priority**: 3 | **Effort**: Large | **Saturation**: NOVEL
+**As a** insurance analyst
+**I want to** receive alerts for specific events like earthquakes above magnitude 6.0
+**So that** I can assess portfolio exposure
 
-#### 5.2.1 Data Acquisition
-- [ ] Research county tax collector data sources
-- [ ] Evaluate GovEase, Tax Sale Resources
-- [ ] Document available data fields
+#### Backend Implementation
+- [ ] Extend `Alert` model for event type
+- [ ] Support event types: earthquake, contract_award, etc.
+- [ ] Implement event criteria configuration (magnitude > X)
+- [ ] Implement geographic filters (region, distance from location)
+- [ ] Include estimated impact in alert payload
+- [ ] Implement critical event immediate dispatch
 
-#### 5.2.2 Collector Implementation
-- [ ] Create `src/collectors/tax_liens.py`
-- [ ] Implement data collection from available sources
-- [ ] Track liens sold, foreclosures, auction results
-- [ ] Register collector (monthly)
+#### Frontend Implementation
+- [ ] Build event alert configuration form
+- [ ] Event type selector
+- [ ] Event criteria inputs
+- [ ] Geographic filter (map-based or dropdown)
+- [ ] Impact estimation toggle
 
-#### 5.2.3 Data Model
-- [ ] Create SQLAlchemy model for real estate distress
-- [ ] Generate Alembic migration
-
-#### 5.2.4 Factor Implementation
-- [ ] Implement `TaxLienVolumeGrowth` factor
-  - YoY change in liens sold
-  - Signal: real estate distress
-
-#### 5.2.5 Entity Mapping
-- [ ] Map to REITs, homebuilders, mortgage servicers
-
-#### 5.2.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate data coverage
+#### Testing
+- [ ] Test event matching logic
+- [ ] Test geographic filtering
+- [ ] Test immediate dispatch for critical events
 
 ---
 
-### Task 5.3: OpenCelliD 5G Coverage
+### US-012: Subscribe to WebSocket Streams
 
-**Priority**: 3 | **Effort**: Medium | **Saturation**: NOVEL
+**As a** quant PM
+**I want to** subscribe to real-time factor updates via WebSocket
+**So that** I can incorporate signals into my intraday trading system
 
-#### 5.3.1 Data Acquisition
-- [ ] Review OpenCelliD database access
-- [ ] Document cell tower data format
-- [ ] Identify 5G vs 4G differentiation
+#### Backend Implementation
+- [ ] Implement WebSocket server endpoint
+- [ ] Implement API key authentication for WebSocket
+- [ ] Support subscription to specific factors and tickers
+- [ ] Support verbosity levels (simple, delta, full with mean/variance)
+- [ ] Implement automatic reconnection handling
+- [ ] Implement heartbeat mechanism
+- [ ] Create Python SDK wrapper
 
-#### 5.3.2 Collector Implementation
-- [ ] Create `src/collectors/opencellid.py`
-- [ ] Implement data collection
-- [ ] Track cell tower locations and types
-- [ ] Register collector (weekly)
+#### Frontend Implementation
+- [ ] Build WebSocket connection management
+- [ ] Build subscription configuration UI
+- [ ] Display real-time updates
 
-#### 5.3.3 Data Model
-- [ ] Create SQLAlchemy model for cell coverage
-- [ ] Generate Alembic migration
+#### SDK Implementation
+- [ ] Create `altdata.stream` module in Python SDK
+- [ ] Implement async subscription interface
+- [ ] Document usage examples
 
-#### 5.3.4 Factor Implementation
-- [ ] Implement `5GDeploymentRate` factor
-  - 5G towers / total towers over time
-
-#### 5.3.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate coverage data
-
----
-
-### Task 5.4: USGS Critical Minerals
-
-**Priority**: 3 | **Effort**: Small | **Saturation**: LOW
-
-#### 5.4.1 Data Acquisition
-- [ ] Review USGS Mineral Commodity Summaries
-- [ ] Review IEA Critical Minerals Explorer
-- [ ] Document annual/quarterly release schedules
-
-#### 5.4.2 Collector Implementation
-- [ ] Create `src/collectors/critical_minerals.py`
-- [ ] Implement data collection from USGS
-- [ ] Track production by mineral and country
-- [ ] Register collector (quarterly)
-
-#### 5.4.3 Data Model
-- [ ] Create SQLAlchemy model for mineral production
-- [ ] Generate Alembic migration
-
-#### 5.4.4 Factor Implementation
-- [ ] Implement `ProductionConcentrationRisk` factor
-  - Top 3 country share
-  - Signal: supply chain risk
-
-#### 5.4.5 Entity Mapping
-- [ ] Map to lithium: ALB, LTHM
-- [ ] Map to rare earths: MP
-- [ ] Map to copper: FCX, SCCO
-
-#### 5.4.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate production values
+#### Testing
+- [ ] Test WebSocket connection stability
+- [ ] Test subscription filtering
+- [ ] Test reconnection logic
 
 ---
 
-## Phase 6: Infrastructure & VC
+### US-013: Manage Alert Fatigue
 
-**Goal**: Capture AI infrastructure and startup ecosystem signals.
-**Estimated Tasks**: 3 data sources, ~15 subtasks
-**Dependencies**: Phase 1-5 patterns
-**Validation**: Data freshness monitoring
+**As a** analyst
+**I want to** configure smart suppression for my alerts
+**So that** I don't get overwhelmed with notifications
 
----
+#### Backend Implementation
+- [ ] Extend alert configuration:
+  - Quiet hours (no alerts during specified times)
+  - Cooldown period between repeated alerts
+  - Daily digest option
+- [ ] Implement ML-based alert prioritization
+- [ ] Implement alert bundling
+- [ ] Create alert history endpoint with read/unread status
 
-### Task 6.1: Data Center Pipeline
+#### Frontend Implementation
+- [ ] Build quiet hours configuration
+- [ ] Build cooldown period input
+- [ ] Build digest vs real-time toggle
+- [ ] Build alert history view with read/unread
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: LOW
-
-#### 6.1.1 Data Acquisition
-- [ ] Research CBRE Data Center Reports
-- [ ] Review Synergy Research data
-- [ ] Review Data Center Frontier news
-- [ ] Document available metrics (MW capacity, vacancy)
-
-#### 6.1.2 Collector Implementation
-- [ ] Create `src/collectors/datacenter.py`
-- [ ] Implement data collection (may be manual/quarterly)
-- [ ] Track capacity additions, construction pipeline
-- [ ] Register collector (monthly/quarterly)
-
-#### 6.1.3 Data Model
-- [ ] Create SQLAlchemy model for data center capacity
-- [ ] Generate Alembic migration
-
-#### 6.1.4 Factor Implementation
-- [ ] Implement `CapacityGrowthRate` factor
-  - New MW added / existing MW
-  - Signal: AI infrastructure demand
-
-#### 6.1.5 Entity Mapping
-- [ ] Map to DC REITs: EQIX, DLR
-- [ ] Map to AI chips: NVDA, AMD
-
-#### 6.1.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate capacity values
+#### Testing
+- [ ] Test quiet hours logic
+- [ ] Test cooldown enforcement
+- [ ] Test digest generation
 
 ---
 
-### Task 6.2: Crunchbase VC Data
+## Epic 4: Geographic Visualization
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: MEDIUM
-
-#### 6.2.1 Data Acquisition
-- [ ] Review Crunchbase free tier capabilities
-- [ ] Document API rate limits
-- [ ] Identify available fields (funding rounds, amounts)
-
-#### 6.2.2 Collector Implementation
-- [ ] Create `src/collectors/crunchbase.py`
-- [ ] Implement API client (within free tier limits)
-- [ ] Track funding rounds by sector
-- [ ] Register collector (daily/weekly)
-
-#### 6.2.3 Data Model
-- [ ] Create SQLAlchemy model for VC funding
-- [ ] Generate Alembic migration
-
-#### 6.2.4 Factor Implementation
-- [ ] Implement `SectorFundingVelocity` factor
-  - Category $ raised month-over-month
-- [ ] Implement `MegaRoundCount` factor
-  - Deals > $100M / total deals
-
-#### 6.2.5 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate funding amounts
+**Goal**: Display events and data on interactive maps.
 
 ---
 
-### Task 6.3: Office Lease Data
+### US-014: View Earthquake Event Map
 
-**Priority**: 3 | **Effort**: Medium | **Saturation**: MEDIUM
+**As a** insurance analyst
+**I want to** see earthquake events on a geographic map
+**So that** I can assess exposure for insurance companies
 
-#### 6.3.1 Data Acquisition
-- [ ] Research CBRE, JLL, CoStar data access
-- [ ] Identify free vs paid data sources
-- [ ] Document available metrics (vacancy, lease rates)
+#### Backend Implementation
+- [ ] Create `GET /api/v1/geo/earthquakes` endpoint
+- [ ] Support filters: magnitude_min, date_range
+- [ ] Return GeoJSON with event details
+- [ ] Compute population within radius
+- [ ] Compute estimated economic impact
+- [ ] Compute insurance loss estimates by insurer
 
-#### 6.3.2 Collector Implementation
-- [ ] Create `src/collectors/office_lease.py`
-- [ ] Implement data collection from available sources
-- [ ] Track vacancy rates, lease rates, absorption
-- [ ] Register collector (quarterly)
+#### Frontend Implementation
+- [ ] Integrate map library (Mapbox, Leaflet, or Google Maps)
+- [ ] Display earthquake markers sized by magnitude
+- [ ] Build magnitude filter slider
+- [ ] Build date range filter
+- [ ] Implement marker click for details panel:
+  - Magnitude, depth, location, timestamp
+  - Population within radius
+  - Economic impact estimate
+  - Insurance loss by insurer
 
-#### 6.3.3 Data Model
-- [ ] Create SQLAlchemy model for office market data
-- [ ] Generate Alembic migration
-
-#### 6.3.4 Factor Implementation
-- [ ] Implement `VacancyTrend` factor
-  - QoQ vacancy rate change
-- [ ] Implement `NetAbsorptionIndex` factor
-  - Absorption / total inventory
-
-#### 6.3.5 Entity Mapping
-- [ ] Map to office REITs: BXP, SLG, VNO
-
-#### 6.3.6 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate market data
+#### Testing
+- [ ] Test GeoJSON formatting
+- [ ] Test impact calculations
+- [ ] Frontend map interaction tests
 
 ---
 
-## Phase 7: Entity Mapping & Factor Computation
+### US-015: Configure Regional Earthquake Thresholds
 
-**Goal**: Build robust entity mapping and implement all Phase 1-6 factors.
-**Estimated Tasks**: 4 mapping systems, comprehensive factor validation
-**Dependencies**: All Phase 1-6 data
-**Validation**: Factor IC/IR validation
+**As a** data admin
+**I want to** set different magnitude thresholds by region
+**So that** alerts are appropriate for population/asset exposure
 
----
+#### Backend Implementation
+- [ ] Create `RegionalThreshold` model
+- [ ] Support geographic region definition (GeoJSON polygons)
+- [ ] Allow magnitude threshold per region
+- [ ] Implement endpoint to preview which events would trigger
 
-### Task 7.1: DUNS→Ticker Mapping
+#### Frontend Implementation
+- [ ] Build region definition interface (draw on map or select preset)
+- [ ] Build threshold configuration per region
+- [ ] Display default thresholds (lower near population centers)
+- [ ] Build preview of recent triggering events
 
-**Priority**: 1 | **Effort**: Large | **Saturation**: N/A
-
-#### 7.1.1 Mapping Table Design
-- [ ] Create SQLAlchemy model `GovernmentContractorMapping`
-  - `duns`: String, indexed
-  - `uei`: String, indexed
-  - `vendor_name_pattern`: String (regex)
-  - `ticker`: String, indexed
-  - `company_name`: String
-  - `confidence_score`: Float (1.0=manual, 0.7=algorithm)
-  - `updated_at`: DateTime
-- [ ] Generate Alembic migration
-
-#### 7.1.2 Seed Data
-- [ ] Manually verify and seed top 25 defense contractors
-  - LMT, RTX, BA, GD, NOC, LHX, HII, LDOS, SAIC, BAH
-  - CACI, MRCY, KTOS, PLTR, NET...
-- [ ] Extend to top 100 contractors by value
-- [ ] Document DUNS numbers for each
-
-#### 7.1.3 Fuzzy Matching Algorithm
-- [ ] Implement `normalize_company_name()` function
-  - Remove Inc, Corp, LLC, etc.
-  - Standardize abbreviations
-- [ ] Implement fuzzy name matching
-  - Use fuzzywuzzy or rapidfuzz
-  - Threshold tuning
-- [ ] Implement subsidiary→parent lookup
-  - Build parent company database
-
-#### 7.1.4 Mapping Validation
-- [ ] Create mapping coverage report
-- [ ] Validate 95%+ of top 25 contractors mapped
-- [ ] Review and correct low-confidence mappings
-
-#### 7.1.5 Testing
-- [ ] Write unit tests for mapping functions
-- [ ] Test edge cases (name variations, subsidiaries)
+#### Testing
+- [ ] Test threshold evaluation by region
+- [ ] Test preview accuracy
 
 ---
 
-### Task 7.2: Game→Publisher→Ticker Mapping
+### US-016: View Power Grid Node Map
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: N/A
+**As a** energy analyst
+**I want to** see LMP prices visualized on a geographic map
+**So that** I can identify price spikes and congestion
 
-#### 7.2.1 Mapping Table Design
-- [ ] Create SQLAlchemy model `GamePublisherMapping`
-  - `game_name`: String
-  - `game_id`: String (Steam App ID, Twitch ID)
-  - `publisher_name`: String
-  - `ticker`: String, indexed
-  - `confidence_score`: Float
-- [ ] Generate Alembic migration
+#### Backend Implementation
+- [ ] Create `GET /api/v1/geo/power-grid` endpoint
+- [ ] Return LMP data by ISO region (PJM, ERCOT, CAISO, ISO-NE, MISO, SPP, NYISO)
+- [ ] Support historical playback
+- [ ] Include node-level price history
+- [ ] Include renewable generation share overlay
 
-#### 7.2.2 Seed Data
-- [ ] Map top 100 games on Twitch/Steam
-- [ ] Map publishers to tickers:
-  - EA → EA
-  - Activision Blizzard → ATVI
-  - Take-Two → TTWO
-  - Ubisoft → UBSFY
-  - Roblox → RBLX
-  - Microsoft (Minecraft, etc.) → MSFT
+#### Frontend Implementation
+- [ ] Build map showing ISO regions
+- [ ] Implement heat map overlay of LMP prices
+- [ ] Build historical playback slider
+- [ ] Implement node click for price history chart
+- [ ] Build price percentile filter
+- [ ] Build renewable share overlay toggle
 
-#### 7.2.3 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate coverage of top games
-
----
-
-### Task 7.3: Studio→Ticker Mapping
-
-**Priority**: 2 | **Effort**: Small | **Saturation**: N/A
-
-#### 7.3.1 Mapping Table Design
-- [ ] Create SQLAlchemy model `MovieStudioMapping`
-  - `distributor_name`: String (as appears in box office data)
-  - `studio_name`: String
-  - `ticker`: String, indexed
-- [ ] Generate Alembic migration
-
-#### 7.3.2 Seed Data
-- [ ] Map all major studios:
-  - Disney (Walt Disney Studios, Marvel, Pixar, Lucasfilm, 20th Century) → DIS
-  - Warner Bros → WBD
-  - Paramount → PARA
-  - Universal → CMCSA
-  - Sony Pictures → SONY
-  - Lionsgate → LGF.A
-  - A24 → Private
-  - Focus Features → CMCSA
-
-#### 7.3.3 Testing & Validation
-- [ ] Write unit tests
-- [ ] Validate distributor name variations
+#### Testing
+- [ ] Test LMP data accuracy
+- [ ] Test playback functionality
+- [ ] Frontend map rendering tests
 
 ---
 
-### Task 7.4: Phase 1 Factor Implementation Review
+## Epic 5: Backtesting & Research
 
-**Priority**: 1 | **Effort**: Medium | **Saturation**: N/A
-
-#### 7.4.1 Factor Audit
-- [ ] List all factors from Phase 1 tasks
-- [ ] Verify each factor is implemented and registered
-- [ ] Check factor computation logic
-
-#### 7.4.2 Factor Quality Metrics
-- [ ] Compute Information Coefficient (IC) for each factor
-  - Target: IC > 0.02
-- [ ] Compute Information Ratio (IR) for each factor
-  - Target: IR > 0.5
-- [ ] Generate factor correlation matrix
-- [ ] Identify redundant factors
-
-#### 7.4.3 Factor Decay Analysis
-- [ ] Analyze IC at horizons: 1d, 5d, 10d, 21d, 63d
-- [ ] Estimate half-life for each factor
-- [ ] Document optimal holding periods
-
-#### 7.4.4 Factor Documentation
-- [ ] Document each factor's computation logic
-- [ ] Document target entities
-- [ ] Document expected signal interpretation
+**Goal**: Enable users to validate factor quality through backtesting.
 
 ---
 
-## Phase 8: Platform Integration
+### US-017: Run Factor Backtest
 
-**Goal**: Build platform UI and user-facing features.
-**Estimated Tasks**: 4 UI components
-**Dependencies**: All prior phases
-**Validation**: E2E user flow testing
+**As a** quant PM
+**I want to** backtest a factor against my return data
+**So that** I can validate signal quality before deployment
 
----
+#### Backend Implementation
+- [ ] Create `POST /api/v1/backtest/run` endpoint
+- [ ] Accept return data upload (CSV: ticker, date, return)
+- [ ] Accept factor_id and date_range
+- [ ] Compute: IC, IR, t-stat, hit rate
+- [ ] Compute decile spread (long-short returns)
+- [ ] Compute monthly IC time series
+- [ ] Flag survivorship bias warnings
 
-### Task 8.1: Data Catalog UI
+#### Frontend Implementation
+- [ ] Build return data upload interface
+- [ ] Build factor and date range selection
+- [ ] Display metrics table (IC, IR, t-stat, hit rate)
+- [ ] Build decile spread chart
+- [ ] Build monthly IC time series chart
+- [ ] Display survivorship bias warnings
 
-**Priority**: 1 | **Effort**: Medium | **Saturation**: N/A
-
-#### 8.1.1 Design
-- [ ] Define data catalog schema/metadata
-  - Source name, description
-  - Frequency, latency
-  - Coverage, saturation level
-  - Sample data preview
-- [ ] Design UI wireframes
-
-#### 8.1.2 Backend
-- [ ] Create FastAPI endpoints for catalog
-- [ ] Create Pydantic response models
-- [ ] Implement catalog search/filter
-
-#### 8.1.3 Frontend
-- [ ] Build React components for catalog listing
-- [ ] Build detail view for each data source
-- [ ] Implement search and filter UI
-
-#### 8.1.4 Testing
-- [ ] Write API tests
-- [ ] Write frontend component tests
-- [ ] E2E testing for catalog flow
+#### Testing
+- [ ] Test backtest computation accuracy
+- [ ] Test file upload handling
+- [ ] Validate metrics against known benchmarks
 
 ---
 
-### Task 8.2: Visualization Components
+### US-018: Analyze Factor Decay
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: N/A
+**As a** data scientist
+**I want to** analyze how factor signal decays over time
+**So that** I can determine optimal holding period
 
-#### 8.2.1 Design
-- [ ] Define chart types needed
-  - Time-series line charts
-  - Factor heatmaps
-  - Correlation matrices
-- [ ] Design visualization wireframes
+#### Backend Implementation
+- [ ] Create `GET /api/v1/factors/{factor_id}/decay` endpoint
+- [ ] Compute IC at horizons: 1d, 2d, 5d, 10d, 21d, 63d, 126d, 252d
+- [ ] Estimate signal half-life
+- [ ] Support multi-factor comparison
 
-#### 8.2.2 Implementation
-- [ ] Select charting library (Recharts, D3, Plotly)
-- [ ] Build time-series chart component
-- [ ] Build heatmap component
-- [ ] Build correlation matrix component
+#### Frontend Implementation
+- [ ] Build decay curve chart
+- [ ] Display half-life estimate
+- [ ] Build multi-factor overlay for comparison
 
-#### 8.2.3 Integration
-- [ ] Connect charts to factor data endpoints
-- [ ] Implement date range selection
-- [ ] Implement entity selection
-
-#### 8.2.4 Testing
-- [ ] Test chart rendering
-- [ ] Test data binding
-- [ ] Performance testing
+#### Testing
+- [ ] Test decay computation
+- [ ] Test half-life estimation accuracy
 
 ---
 
-### Task 8.3: Factor Comparison Tools
+### US-019: Analyze Factor Seasonality
 
-**Priority**: 2 | **Effort**: Medium | **Saturation**: N/A
+**As a** quant PM
+**I want to** understand seasonal patterns in factor performance
+**So that** I can adjust my strategy timing
 
-#### 8.3.1 Design
-- [ ] Define factor comparison features
-  - Multi-factor overlay
-  - IC/IR display
-  - Decay curves
-- [ ] Design comparison UI
+#### Backend Implementation
+- [ ] Create `GET /api/v1/factors/{factor_id}/seasonality` endpoint
+- [ ] Compute day-of-week IC breakdown
+- [ ] Compute monthly IC breakdown
+- [ ] Identify holiday effects (global developed market calendar)
+- [ ] Identify event-based seasonality (earnings season)
+- [ ] Support seasonal adjustment of factor values
 
-#### 8.3.2 Implementation
-- [ ] Build factor selector component
-- [ ] Build comparison chart component
-- [ ] Build metrics display component
+#### Frontend Implementation
+- [ ] Build day-of-week IC chart
+- [ ] Build monthly IC chart
+- [ ] Highlight holiday effects
+- [ ] Display event-based patterns
+- [ ] Build seasonal adjustment toggle
 
-#### 8.3.3 Testing
-- [ ] Test factor comparison logic
-- [ ] Test UI interactions
-
----
-
-### Task 8.4: Authentication & Access Control
-
-**Priority**: 2 | **Effort**: Medium | **Saturation**: N/A
-
-#### 8.4.1 Design
-- [ ] Define user roles and permissions
-- [ ] Define authentication flow (OAuth, JWT)
-- [ ] Design tiered access model
-
-#### 8.4.2 Implementation
-- [ ] Implement user authentication
-- [ ] Implement role-based access control
-- [ ] Implement API key management
-
-#### 8.4.3 Testing
-- [ ] Test authentication flows
-- [ ] Test authorization rules
-- [ ] Security testing
+#### Testing
+- [ ] Test seasonality computation
+- [ ] Test holiday calendar accuracy
 
 ---
 
-## Phase 9: Commercial Data Expansion
+### US-020: Export Research Pack
 
-**Goal**: Integrate commercial/paid data sources.
-**Estimated Tasks**: 6+ data sources (as budget allows)
-**Dependencies**: Platform complete
-**Validation**: ROI analysis
+**As a** data scientist
+**I want to** export a complete research pack for a factor
+**So that** I can share analysis with my team
 
----
+#### Backend Implementation
+- [ ] Create `POST /api/v1/factors/{factor_id}/export` endpoint
+- [ ] Generate Jupyter notebook with analysis code
+- [ ] Include raw factor data (CSV, Parquet, Arrow)
+- [ ] Include computed statistics (JSON)
+- [ ] Include charts as PNG/SVG
+- [ ] Include methodology documentation (PDF/Markdown)
+- [ ] Package as downloadable ZIP
 
-### Task 9.1: Satellite Imagery (Orbital Insight)
+#### Frontend Implementation
+- [ ] Build export button on factor detail page
+- [ ] Show export progress indicator
+- [ ] Download ZIP on completion
 
-**Priority**: 3 | **Effort**: High | **Saturation**: MEDIUM
-
-- [ ] Evaluate Orbital Insight pricing and API
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
-
----
-
-### Task 9.2: Foot Traffic (Placer.ai)
-
-**Priority**: 3 | **Effort**: High | **Saturation**: MEDIUM
-
-- [ ] Evaluate Placer.ai pricing and API
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
+#### Testing
+- [ ] Test notebook generation
+- [ ] Test all export formats
+- [ ] Test ZIP packaging
 
 ---
 
-### Task 9.3: Credit Card Data
+### US-021: Run Factor A/B Experiment
 
-**Priority**: 4 | **Effort**: High | **Saturation**: HIGH
+**As a** data scientist
+**I want to** run A/B tests on different factor formulations
+**So that** I can identify the best performing variant
 
-- [ ] Evaluate Bloomberg Second Measure, Earnest
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
+#### Backend Implementation
+- [ ] Create `Experiment` model
+- [ ] Create CRUD endpoints for experiments
+- [ ] Support control vs treatment factor definition
+- [ ] Track parallel performance metrics
+- [ ] Implement statistical significance testing (p-value)
+- [ ] Support promoting winning variant
 
----
+#### Frontend Implementation
+- [ ] Build experiment creation form
+- [ ] Display parallel metrics tracking
+- [ ] Show statistical significance results
+- [ ] Build "Promote to production" button
 
-### Task 9.4: Job Posting Data (Revelio Labs)
-
-**Priority**: 3 | **Effort**: Medium | **Saturation**: MEDIUM
-
-- [ ] Evaluate Revelio Labs or LinkUp
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
-
----
-
-### Task 9.5: Maritime AIS (Kpler)
-
-**Priority**: 3 | **Effort**: Medium | **Saturation**: MEDIUM
-
-- [ ] Evaluate Kpler/MarineTraffic pricing
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
+#### Testing
+- [ ] Test experiment tracking
+- [ ] Test significance calculations
 
 ---
 
-### Task 9.6: Retail Scanner Data (NielsenIQ)
+## Epic 6: API Integration
 
-**Priority**: 4 | **Effort**: High | **Saturation**: HIGH
-
-- [ ] Evaluate NielsenIQ/Circana pricing
-- [ ] Design integration architecture
-- [ ] Implement if budget approved
+**Goal**: Provide programmatic access to platform data.
 
 ---
 
-## Validation & Testing Framework
+### US-022: Authenticate with API Key
 
-### Data Quality Framework
+**As a** developer
+**I want to** authenticate API requests with an API key
+**So that** I can access factor data programmatically
 
-#### Freshness Validation
-| Data Source | Expected Latency | Check Frequency |
-|-------------|------------------|-----------------|
-| TSA Checkpoint | 12 hours | Daily |
-| OpenTable | 2 days | Weekly |
-| Government Contracts | 48 hours | Daily |
-| Twitch Metrics | 1 hour | Hourly |
-| Steam Metrics | 24 hours | Daily |
-| Earthquake Events | 15 minutes | Continuous |
-| Power Grid Load | 5 minutes | Continuous |
+#### Backend Implementation
+- [ ] Create `APIKey` model
+- [ ] Implement key generation (show once, cannot retrieve)
+- [ ] Implement Bearer token authentication middleware
+- [ ] Tie key to account tier with rate limits
+- [ ] Support key rotation (create new, deprecate old)
+- [ ] Track usage statistics per key
 
-#### Coverage Validation
-| Data Source | Expected Coverage | Threshold |
-|-------------|-------------------|-----------|
-| Gov Contracts (Top 25) | 95% | 90% |
-| Gaming (Top 100 Games) | 90% | 85% |
-| Major Publishers | 10 | 8 |
+#### Frontend Implementation
+- [ ] Build API key management in user settings
+- [ ] Key generation with copy-once display
+- [ ] Show active keys with usage stats
+- [ ] Key rotation interface
+- [ ] Usage dashboard (requests, data volume)
 
-#### Point-in-Time (PIT) Accuracy
-- [ ] Implement PIT validator class
-- [ ] Verify no look-ahead bias in factor computation
-- [ ] Audit all factors for PIT compliance
-
-### Factor Quality Metrics
-
-| Metric | Target | Critical Threshold |
-|--------|--------|-------------------|
-| Mean IC | > 0.02 | > 0.01 |
-| IR | > 0.5 | > 0.3 |
-| T-stat | > 2.0 | > 1.5 |
-| Hit Rate | > 52% | > 50% |
-
-### Platform Performance Benchmarks
-
-| Metric | Target | Critical |
-|--------|--------|----------|
-| API P50 Latency | < 100ms | < 500ms |
-| API P99 Latency | < 500ms | < 2000ms |
-| Factor Compute Batch | < 1 hour | < 4 hours |
-| UI Time to Interactive | < 3 sec | < 10 sec |
-| Concurrent Users | 100 | 50 |
-
-### Automated Quality Monitoring
-- [ ] Implement `DataFreshnessChecker` class
-- [ ] Implement `CoverageValidator` class
-- [ ] Implement `PITValidator` class
-- [ ] Implement `QualityMonitor` daily checks
-- [ ] Set up alerting for quality degradation
+#### Testing
+- [ ] Test authentication middleware
+- [ ] Test rate limiting
+- [ ] Test key rotation
 
 ---
 
-## Research Queue (Future Exploration)
+### US-023: Query Factor History via REST
 
-### Tier A: High Novel Potential
-- Tax Lien/Foreclosure Data
-- Crowdfunding Campaigns (Kickstarter)
-- Video Game Sales (Circana/NPD)
-- 5G Cell Tower Permits
-- EV Charging Utilization
+**As a** quant PM
+**I want to** query historical factor values via REST API
+**So that** I can integrate data into my backtesting system
 
-### Tier B: Medium Novel Potential
-- Domain Registrations
-- Podcast Downloads
-- Music Streaming Charts
-- Sports Betting Lines
-- Academic Citations
-- Trade Show Attendance
+#### Backend Implementation
+- [ ] Create `GET /api/v1/factors/{factor_id}/history` endpoint
+- [ ] Query params: tickers (comma-separated), start_date, end_date
+- [ ] Implement cursor-based pagination
+- [ ] Support response formats: JSON, CSV, Parquet, Arrow
+- [ ] Include mean and variance in response
+- [ ] Include as_of_date and computation_timestamp
+- [ ] Return rate limit headers
 
-### Tier C: Requires Commercial Access
-- Supply Chain Visibility (FourKites)
-- Earnings Call Transcripts NLP
-- Influencer Marketing Data
+#### Testing
+- [ ] Test all query param combinations
+- [ ] Test pagination
+- [ ] Test all response formats
 
 ---
 
-## Quick Reference: File Paths
+### US-024: Query Entity Factors via REST
 
-### Collectors
+**As a** analyst
+**I want to** get all factors for a specific ticker
+**So that** I can see the full signal picture
+
+#### Backend Implementation
+- [ ] Create `GET /api/v1/entities/{ticker}/factors` endpoint
+- [ ] Optional factor_ids filter
+- [ ] Optional date range filter
+- [ ] Return latest values by default
+- [ ] Include factor metadata in response
+- [ ] Support ETF ticker aggregation
+
+#### Testing
+- [ ] Test ticker lookup
+- [ ] Test ETF aggregation
+- [ ] Test filtering
+
+---
+
+### US-025: Generate Pine Script Indicator
+
+**As a** retail trader
+**I want to** generate a Pine Script indicator from a platform factor
+**So that** I can use it in TradingView
+
+#### Backend Implementation
+- [ ] Create `POST /api/v1/factors/{factor_id}/pinescript` endpoint
+- [ ] Generate Pine Script code for factor
+- [ ] Include real-time data feed integration code
+- [ ] Generate TradingView setup instructions
+
+#### Frontend Implementation
+- [ ] Build "Generate Pine Script" button on factor page
+- [ ] Display generated code in modal
+- [ ] Copy to clipboard button
+- [ ] Show setup instructions
+
+#### Testing
+- [ ] Validate generated Pine Script syntax
+- [ ] Test code generation for all factor types
+
+---
+
+### US-026: Full TradingView Sync
+
+**As a** quant developer
+**I want to** bidirectionally sync between platform and TradingView
+**So that** I can use both tools seamlessly
+
+#### Backend Implementation
+- [ ] Implement real-time factor push to TradingView
+- [ ] Implement TradingView annotation import
+- [ ] Synchronize backtesting capabilities
+- [ ] Create Pine Script SDK documentation
+- [ ] Implement OAuth connection to TradingView
+
+#### Frontend Implementation
+- [ ] Build TradingView connection setup
+- [ ] Display sync status
+- [ ] Build annotation import interface
+
+#### Testing
+- [ ] Test real-time sync
+- [ ] Test annotation import
+- [ ] Test OAuth flow
+
+---
+
+## Epic 7: Entity Mapping
+
+**Goal**: Maintain accurate mappings between data entities and tickers.
+
+---
+
+### US-027: Review Pending Entity Mappings
+
+**As a** data admin
+**I want to** review algorithmically-generated entity mappings
+**So that** I can ensure data quality
+
+#### Backend Implementation
+- [ ] Create `EntityMapping` model with confidence scores
+- [ ] Create `GET /api/v1/admin/mappings/pending` endpoint
+- [ ] Filter for confidence < 0.9
+- [ ] Include AI-suggested alternatives with scores
+- [ ] Create approve/reject/correct endpoints
+- [ ] Support bulk approve for high-confidence
+- [ ] Maintain audit trail
+
+#### Frontend Implementation
+- [ ] Build mapping review queue
+- [ ] Display source entity, suggested ticker, confidence
+- [ ] Show AI alternatives
+- [ ] Approve/reject/correct buttons
+- [ ] Bulk approve interface
+- [ ] Audit trail view
+
+#### Testing
+- [ ] Test mapping workflow
+- [ ] Test audit trail
+
+---
+
+### US-028: Suggest Missing Entity Mapping
+
+**As a** analyst
+**I want to** suggest a ticker mapping for an unmapped entity
+**So that** the data becomes actionable for me
+
+#### Backend Implementation
+- [ ] Create `GET /api/v1/entities/unmapped` endpoint
+- [ ] Filter by data source
+- [ ] Create `POST /api/v1/mappings/suggest` endpoint
+- [ ] Track suggestion status (submitted, reviewing, approved, rejected)
+- [ ] Notify user on status change
+
+#### Frontend Implementation
+- [ ] Build unmapped entities list
+- [ ] Build suggestion submission form
+- [ ] Show suggestion status tracking
+- [ ] Display notifications on status change
+
+#### Testing
+- [ ] Test suggestion workflow
+- [ ] Test notifications
+
+---
+
+### US-029: View Entity Mapping Coverage
+
+**As a** data admin
+**I want to** see entity mapping coverage statistics
+**So that** I can prioritize mapping efforts
+
+#### Backend Implementation
+- [ ] Create `GET /api/v1/admin/mappings/coverage` endpoint
+- [ ] Compute % mapped by data source
+- [ ] Compute $ value/volume of unmapped entities
+- [ ] Prioritize high-value unmapped entities
+- [ ] Track coverage trend over time
+- [ ] Support export of unmapped list
+
+#### Frontend Implementation
+- [ ] Build coverage dashboard
+- [ ] Display % mapped by source (bar chart)
+- [ ] Show unmapped $ value
+- [ ] Build prioritized unmapped list
+- [ ] Build coverage trend chart
+- [ ] Export button
+
+#### Testing
+- [ ] Test coverage calculations
+- [ ] Test prioritization logic
+
+---
+
+### US-030: Handle Corporate Actions
+
+**As a** data admin
+**I want to** be notified of corporate actions affecting mappings
+**So that** historical data is properly adjusted
+
+#### Backend Implementation
+- [ ] Implement corporate action detection (ticker changes, mergers, spinoffs)
+- [ ] Create alert on detected actions
+- [ ] Show affected entity mappings
+- [ ] Preview historical adjustment impact
+- [ ] Implement approve/reject adjustment
+- [ ] Maintain audit trail
+
+#### Frontend Implementation
+- [ ] Build corporate action alerts
+- [ ] Show affected mappings
+- [ ] Preview adjustment impact
+- [ ] Approve/reject interface
+- [ ] Audit trail view
+
+#### Testing
+- [ ] Test corporate action detection
+- [ ] Test historical adjustment
+
+---
+
+## Epic 8: Disaster & Event Signals
+
+**Goal**: Provide specialized signals for disaster and event-driven analysis.
+
+---
+
+### US-031: View Insurance Loss Estimates
+
+**As a** insurance analyst
+**I want to** see modeled loss estimates by insurer after disasters
+**So that** I can assess sector impact
+
+#### Backend Implementation
+- [ ] Create loss estimation model
+- [ ] Compute estimates after earthquake above threshold
+- [ ] Break down by major insurers (ALL, TRV, CB, PGR, etc.)
+- [ ] Include confidence intervals (mean + variance)
+- [ ] Factor in geographic book exposure
+- [ ] Factor in reinsurance arrangements
+- [ ] Compare to historical similar events
+
+#### Frontend Implementation
+- [ ] Build loss estimate panel (triggered by qualifying event)
+- [ ] Display breakdown by insurer
+- [ ] Show confidence intervals
+- [ ] Historical comparison chart
+
+#### Testing
+- [ ] Validate loss model accuracy
+- [ ] Test historical comparison
+
+---
+
+### US-032: View Box Office Predictions
+
+**As a** entertainment analyst
+**I want to** see opening weekend forecasts from Thursday previews
+**So that** I can anticipate studio performance
+
+#### Backend Implementation
+- [ ] Create box office prediction model
+- [ ] Implement ensemble model for weekend forecast
+- [ ] Compute confidence intervals
+- [ ] Compare to studio guidance/tracking
+- [ ] Track historical model accuracy
+- [ ] Map predictions to studio tickers
+
+#### Frontend Implementation
+- [ ] Build forecast panel after Thursday preview release
+- [ ] Display ensemble predictions
+- [ ] Show confidence intervals
+- [ ] Compare to guidance
+- [ ] Show model accuracy history
+- [ ] Link to affected tickers
+
+#### Testing
+- [ ] Validate prediction model accuracy
+- [ ] Test ensemble computation
+
+---
+
+## Epic 9: Data Catalog Management
+
+**Goal**: Enable management and monitoring of data sources.
+
+---
+
+### US-033: Request New Data Source
+
+**As a** analyst
+**I want to** request that a new data source be added
+**So that** I can get signals I need
+
+#### Backend Implementation
+- [ ] Create `DataSourceRequest` model
+- [ ] Create CRUD endpoints
+- [ ] Track status (submitted, evaluating, approved, rejected, implemented)
+- [ ] Notify user on status changes
+
+#### Frontend Implementation
+- [ ] Build request submission form (name, URL, description, use case)
+- [ ] Priority indicator
+- [ ] Status tracking view
+- [ ] Notification display
+
+#### Testing
+- [ ] Test request workflow
+- [ ] Test notifications
+
+---
+
+### US-034: View Source Health Dashboard
+
+**As a** data admin
+**I want to** see health status of all data collectors
+**So that** I can identify and fix issues
+
+#### Backend Implementation
+- [ ] Implement collector health tracking
+- [ ] Create `GET /api/v1/admin/collectors/health` endpoint
+- [ ] Track up/down status, last success timestamp
+- [ ] Track data freshness vs SLA
+- [ ] Store error logs
+- [ ] Implement manual trigger endpoint
+
+#### Frontend Implementation
+- [ ] Build health dashboard
+- [ ] Display collector list with status indicators
+- [ ] Show last successful collection
+- [ ] Show freshness vs SLA
+- [ ] Alert on SLA breaches
+- [ ] Error log viewer
+- [ ] Manual trigger button
+
+#### Testing
+- [ ] Test health tracking
+- [ ] Test SLA breach detection
+- [ ] Test manual trigger
+
+---
+
+### US-035: View Archived Sources
+
+**As a** analyst
+**I want to** access historical data from deprecated sources
+**So that** I can maintain continuity in my research
+
+#### Backend Implementation
+- [ ] Implement source archival workflow
+- [ ] Maintain full API access to archived data
+- [ ] Store deprecation reason and date
+- [ ] Link to alternative sources
+- [ ] Ensure factors from archived sources remain computable
+
+#### Frontend Implementation
+- [ ] Display archived label in catalog
+- [ ] Show deprecation reason and date
+- [ ] Suggest alternatives
+- [ ] Full data access via UI/API
+
+#### Testing
+- [ ] Test archived data access
+- [ ] Test factor computation on archived data
+
+---
+
+## Epic 10: User Management & Tiers
+
+**Goal**: Manage user accounts and subscription tiers.
+
+---
+
+### US-036: View Tier Usage
+
+**As a** user
+**I want to** see my API usage relative to tier limits
+**So that** I know if I need to upgrade
+
+#### Backend Implementation
+- [ ] Track API requests per user
+- [ ] Track data volume consumed
+- [ ] Create `GET /api/v1/user/usage` endpoint
+- [ ] Implement 80% and 95% warning thresholds
+- [ ] Track historical usage
+
+#### Frontend Implementation
+- [ ] Build usage dashboard
+- [ ] Display requests used / limit (progress bar)
+- [ ] Display data volume consumed
+- [ ] List features in current tier
+- [ ] Warning banners at 80% and 95%
+- [ ] Historical usage chart
+
+#### Testing
+- [ ] Test usage tracking accuracy
+- [ ] Test warning triggers
+
+---
+
+### US-037: Upgrade Tier
+
+**As a** user
+**I want to** upgrade my subscription tier
+**So that** I can access more data and features
+
+#### Backend Implementation
+- [ ] Implement tier comparison endpoint
+- [ ] Implement upgrade endpoint
+- [ ] Immediate feature access on upgrade
+- [ ] Implement prorated billing calculation
+
+#### Frontend Implementation
+- [ ] Build tier comparison page
+- [ ] Display clear pricing
+- [ ] One-click upgrade button
+- [ ] Confirmation with prorated amount
+- [ ] Success confirmation with new features
+
+#### Testing
+- [ ] Test upgrade flow
+- [ ] Test prorated billing
+- [ ] Test immediate feature access
+
+---
+
+## Technical Specifications
+
+### Architecture
+
+| Component | Technology |
+|-----------|------------|
+| Database | PostgreSQL (PIT-enabled) |
+| Task Queue | Celery + Redis |
+| API | FastAPI |
+| Frontend | Professional fintech SaaS (light mode) |
+| File Storage | S3-compatible |
+
+### SLAs
+
+| Metric | Target |
+|--------|--------|
+| Uptime | 99.99% |
+| API P50 Latency | < 100ms |
+| API P99 Latency | < 500ms |
+| Factor Compute | < 1 hour batch |
+
+### Pricing Tiers
+
+| Tier | Rate Limit | Data Access | Features |
+|------|------------|-------------|----------|
+| Free | 100/day | Phase 1, 30d history | Basic API |
+| Pro | 10K/day | All free, full history | Alerts, backtesting, SDK |
+| Enterprise | Unlimited | All sources | Full features, SLA, support |
+
+---
+
+## File Structure Reference
+
 ```
-src/collectors/
-├── tsa_checkpoint.py
-├── opentable.py
-├── usgs_earthquake.py
-├── carbon_intensity.py
-├── building_permits.py (extend fred_collector.py)
-├── boxoffice.py
-├── cloudflare_radar.py
-├── zillow_rental.py
-├── fpds.py
-├── usaspending.py
-├── congressional_trades.py
-├── fcc_towers.py
-├── twitch.py
-├── steam.py
-├── discord.py
-├── kickstarter.py
-├── lumber_futures.py
-├── manheim.py
-├── power_lmp.py
-├── eia_natgas.py
-├── container_ports.py
-├── viirs_nightlights.py
-├── tax_liens.py
-├── opencellid.py
-├── critical_minerals.py
-├── datacenter.py
-├── crunchbase.py
-└── office_lease.py
-```
-
-### Entity Mappings
-```
-src/entity_mapping/
-├── government_contractor_mapping.py
-├── game_publisher_mapping.py
-└── studio_ticker_mapping.py
-```
-
-### Factors
-```
-src/transformations/factors/
-├── tsa_factors.py
-├── restaurant_factors.py
-├── earthquake_factors.py
-├── carbon_factors.py
-├── building_permit_factors.py
-├── boxoffice_factors.py
-├── internet_factors.py
-├── rental_factors.py
-├── government_contract_factors.py
-├── gaming_factors.py
-├── energy_factors.py
-├── commodity_factors.py
-└── infrastructure_factors.py
+src/
+├── collectors/
+│   ├── tsa_checkpoint.py
+│   ├── opentable.py
+│   ├── usgs_earthquake.py
+│   ├── carbon_intensity.py
+│   ├── fred_collector.py (building permits)
+│   ├── boxoffice.py
+│   ├── cloudflare_radar.py
+│   └── zillow_rental.py
+├── models/
+│   ├── data_sources.py
+│   ├── factors.py
+│   ├── alerts.py
+│   ├── entity_mappings.py
+│   └── users.py
+├── api/
+│   ├── catalog.py
+│   ├── factors.py
+│   ├── alerts.py
+│   ├── backtest.py
+│   ├── geo.py
+│   └── admin.py
+├── transformations/
+│   └── factors/
+│       ├── tsa_factors.py
+│       ├── restaurant_factors.py
+│       ├── earthquake_factors.py
+│       ├── carbon_factors.py
+│       ├── building_permit_factors.py
+│       ├── boxoffice_factors.py
+│       ├── internet_factors.py
+│       └── rental_factors.py
+└── entity_mapping/
+    ├── government_contractor_mapping.py
+    ├── game_publisher_mapping.py
+    └── studio_ticker_mapping.py
 ```
 
 ---
 
-## Summary Statistics
-
-| Category | Count |
-|----------|-------|
-| Total Data Sources | 49 |
-| Phase 1 Sources | 8 |
-| Phase 2 Sources | 4 |
-| Phase 3 Sources | 4 |
-| Phase 4 Sources | 5 |
-| Phase 5 Sources | 4 |
-| Phase 6 Sources | 3 |
-| Entity Mapping Systems | 3 |
-| Platform Components | 4 |
-| Total Derived Factors | 150+ |
-
----
-
-*Last Updated: Generated from steady-tickling-squid.md planning document*
+*Last Updated: Aligned with PRD.md*
