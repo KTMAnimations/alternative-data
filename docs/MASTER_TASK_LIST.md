@@ -28,7 +28,7 @@
 | Foundation | 8 data sources | Complete |
 | Epic 1 | US-001 to US-004 | Complete |
 | Epic 2 | US-005 to US-008 | Complete |
-| Epic 3 | US-009 to US-013 | Not Started |
+| Epic 3 | US-009 to US-013 | Complete |
 | Epic 4 | US-014 to US-016 | Not Started |
 | Epic 5 | US-017 to US-021 | Not Started |
 | Epic 6 | US-022 to US-026 | Not Started |
@@ -576,15 +576,15 @@
 **So that** I'm notified of significant market signals
 
 #### Backend Implementation
-- [ ] Create `Alert` model:
+- [x] Create `Alert` model:
   - `factor_id`, `ticker_list`, `threshold_value`
   - `direction` (above, below, crosses)
   - `notification_channel` (email, webhook)
   - `name`, `description`, `enabled`
-- [ ] Create CRUD endpoints for alerts
-- [ ] Implement alert evaluation engine
-- [ ] Implement notification dispatch (email, webhook)
-- [ ] Implement test alert functionality
+- [x] Create CRUD endpoints for alerts
+- [x] Implement alert evaluation engine
+- [x] Implement notification dispatch (email, webhook)
+- [x] Implement test alert functionality
 
 #### Frontend Implementation
 - [ ] Build alert creation form
@@ -597,7 +597,7 @@
 - [ ] Test alert button
 
 #### Testing
-- [ ] Test alert evaluation logic
+- [x] Test alert evaluation logic
 - [ ] Test notification dispatch
 - [ ] E2E alert creation and trigger flow
 
@@ -610,12 +610,12 @@
 **So that** I can react to significant market events
 
 #### Backend Implementation
-- [ ] Extend `Alert` model for anomaly type
-- [ ] Implement statistical anomaly detection:
+- [x] Extend `Alert` model for anomaly type
+- [x] Implement statistical anomaly detection:
   - Configurable sensitivity (standard deviations)
   - Baseline period (7d, 30d, 90d rolling)
-- [ ] Implement ML-based anomaly detection option
-- [ ] Create endpoint to list recent anomalies
+- [x] Implement ML-based anomaly detection option
+- [x] Create endpoint to list recent anomalies
 
 #### Frontend Implementation
 - [ ] Build anomaly alert configuration form
@@ -625,7 +625,7 @@
 - [ ] Recent anomalies display
 
 #### Testing
-- [ ] Test anomaly detection accuracy
+- [x] Test anomaly detection accuracy
 - [ ] Test ML model integration
 
 ---
@@ -637,12 +637,12 @@
 **So that** I can assess portfolio exposure
 
 #### Backend Implementation
-- [ ] Extend `Alert` model for event type
-- [ ] Support event types: earthquake, contract_award, etc.
-- [ ] Implement event criteria configuration (magnitude > X)
-- [ ] Implement geographic filters (region, distance from location)
-- [ ] Include estimated impact in alert payload
-- [ ] Implement critical event immediate dispatch
+- [x] Extend `Alert` model for event type
+- [x] Support event types: earthquake, contract_award, etc.
+- [x] Implement event criteria configuration (magnitude > X)
+- [x] Implement geographic filters (region, distance from location)
+- [x] Include estimated impact in alert payload
+- [x] Implement critical event immediate dispatch
 
 #### Frontend Implementation
 - [ ] Build event alert configuration form
@@ -652,7 +652,7 @@
 - [ ] Impact estimation toggle
 
 #### Testing
-- [ ] Test event matching logic
+- [x] Test event matching logic
 - [ ] Test geographic filtering
 - [ ] Test immediate dispatch for critical events
 
@@ -665,12 +665,12 @@
 **So that** I can incorporate signals into my intraday trading system
 
 #### Backend Implementation
-- [ ] Implement WebSocket server endpoint
-- [ ] Implement API key authentication for WebSocket
-- [ ] Support subscription to specific factors and tickers
-- [ ] Support verbosity levels (simple, delta, full with mean/variance)
-- [ ] Implement automatic reconnection handling
-- [ ] Implement heartbeat mechanism
+- [x] Implement WebSocket server endpoint
+- [x] Implement API key authentication for WebSocket
+- [x] Support subscription to specific factors and tickers
+- [x] Support verbosity levels (simple, delta, full with mean/variance)
+- [x] Implement automatic reconnection handling
+- [x] Implement heartbeat mechanism
 - [ ] Create Python SDK wrapper
 
 #### Frontend Implementation
@@ -684,8 +684,8 @@
 - [ ] Document usage examples
 
 #### Testing
-- [ ] Test WebSocket connection stability
-- [ ] Test subscription filtering
+- [x] Test WebSocket connection stability
+- [x] Test subscription filtering
 - [ ] Test reconnection logic
 
 ---
@@ -697,13 +697,13 @@
 **So that** I don't get overwhelmed with notifications
 
 #### Backend Implementation
-- [ ] Extend alert configuration:
+- [x] Extend alert configuration:
   - Quiet hours (no alerts during specified times)
   - Cooldown period between repeated alerts
   - Daily digest option
-- [ ] Implement ML-based alert prioritization
-- [ ] Implement alert bundling
-- [ ] Create alert history endpoint with read/unread status
+- [x] Implement ML-based alert prioritization
+- [x] Implement alert bundling
+- [x] Create alert history endpoint with read/unread status
 
 #### Frontend Implementation
 - [ ] Build quiet hours configuration
@@ -712,8 +712,8 @@
 - [ ] Build alert history view with read/unread
 
 #### Testing
-- [ ] Test quiet hours logic
-- [ ] Test cooldown enforcement
+- [x] Test quiet hours logic
+- [x] Test cooldown enforcement
 - [ ] Test digest generation
 
 ---
