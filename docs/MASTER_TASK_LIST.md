@@ -30,7 +30,7 @@
 | Epic 2 | US-005 to US-008 | Complete |
 | Epic 3 | US-009 to US-013 | Complete |
 | Epic 4 | US-014 to US-016 | Complete |
-| Epic 5 | US-017 to US-021 | Not Started |
+| Epic 5 | US-017 to US-021 | Complete |
 | Epic 6 | US-022 to US-026 | Not Started |
 | Epic 7 | US-027 to US-030 | Not Started |
 | Epic 8 | US-031 to US-032 | Not Started |
@@ -821,13 +821,13 @@
 **So that** I can validate signal quality before deployment
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/backtest/run` endpoint
-- [ ] Accept return data upload (CSV: ticker, date, return)
-- [ ] Accept factor_id and date_range
-- [ ] Compute: IC, IR, t-stat, hit rate
-- [ ] Compute decile spread (long-short returns)
-- [ ] Compute monthly IC time series
-- [ ] Flag survivorship bias warnings
+- [x] Create `POST /api/v1/backtest/run` endpoint
+- [x] Accept return data upload (CSV: ticker, date, return)
+- [x] Accept factor_id and date_range
+- [x] Compute: IC, IR, t-stat, hit rate
+- [x] Compute decile spread (long-short returns)
+- [x] Compute monthly IC time series
+- [x] Flag survivorship bias warnings
 
 #### Frontend Implementation
 - [ ] Build return data upload interface
@@ -838,8 +838,8 @@
 - [ ] Display survivorship bias warnings
 
 #### Testing
-- [ ] Test backtest computation accuracy
-- [ ] Test file upload handling
+- [x] Test backtest computation accuracy
+- [x] Test file upload handling
 - [ ] Validate metrics against known benchmarks
 
 ---
@@ -851,9 +851,9 @@
 **So that** I can determine optimal holding period
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/factors/{factor_id}/decay` endpoint
-- [ ] Compute IC at horizons: 1d, 2d, 5d, 10d, 21d, 63d, 126d, 252d
-- [ ] Estimate signal half-life
+- [x] Create `GET /api/v1/backtest/decay/{factor_id}` endpoint
+- [x] Compute IC at horizons: 1d, 2d, 5d, 10d, 21d, 63d, 126d, 252d
+- [x] Estimate signal half-life
 - [ ] Support multi-factor comparison
 
 #### Frontend Implementation
@@ -862,8 +862,8 @@
 - [ ] Build multi-factor overlay for comparison
 
 #### Testing
-- [ ] Test decay computation
-- [ ] Test half-life estimation accuracy
+- [x] Test decay computation
+- [x] Test half-life estimation accuracy
 
 ---
 
@@ -874,10 +874,10 @@
 **So that** I can adjust my strategy timing
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/factors/{factor_id}/seasonality` endpoint
-- [ ] Compute day-of-week IC breakdown
-- [ ] Compute monthly IC breakdown
-- [ ] Identify holiday effects (global developed market calendar)
+- [x] Create `GET /api/v1/backtest/seasonality/{factor_id}` endpoint
+- [x] Compute day-of-week IC breakdown
+- [x] Compute monthly IC breakdown
+- [x] Identify holiday effects (global developed market calendar)
 - [ ] Identify event-based seasonality (earnings season)
 - [ ] Support seasonal adjustment of factor values
 
@@ -889,7 +889,7 @@
 - [ ] Build seasonal adjustment toggle
 
 #### Testing
-- [ ] Test seasonality computation
+- [x] Test seasonality computation
 - [ ] Test holiday calendar accuracy
 
 ---
@@ -901,7 +901,7 @@
 **So that** I can share analysis with my team
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/factors/{factor_id}/export` endpoint
+- [x] Create `POST /api/v1/backtest/export` endpoint
 - [ ] Generate Jupyter notebook with analysis code
 - [ ] Include raw factor data (CSV, Parquet, Arrow)
 - [ ] Include computed statistics (JSON)
@@ -915,6 +915,7 @@
 - [ ] Download ZIP on completion
 
 #### Testing
+- [x] Test export endpoint exists
 - [ ] Test notebook generation
 - [ ] Test all export formats
 - [ ] Test ZIP packaging
