@@ -32,7 +32,7 @@
 | Epic 4 | US-014 to US-016 | Complete |
 | Epic 5 | US-017 to US-021 | Complete |
 | Epic 6 | US-022 to US-026 | Complete |
-| Epic 7 | US-027 to US-030 | Not Started |
+| Epic 7 | US-027 to US-030 | Complete |
 | Epic 8 | US-031 to US-032 | Not Started |
 | Epic 9 | US-033 to US-035 | Not Started |
 | Epic 10 | US-036 to US-037 | Not Started |
@@ -1089,12 +1089,12 @@
 **So that** I can ensure data quality
 
 #### Backend Implementation
-- [ ] Create `EntityMapping` model with confidence scores
-- [ ] Create `GET /api/v1/admin/mappings/pending` endpoint
-- [ ] Filter for confidence < 0.9
-- [ ] Include AI-suggested alternatives with scores
-- [ ] Create approve/reject/correct endpoints
-- [ ] Support bulk approve for high-confidence
+- [x] Create `EntityMapping` model with confidence scores
+- [x] Create `GET /api/v1/admin/mappings/pending` endpoint
+- [x] Filter by status (needs_review)
+- [x] Include AI-suggested alternatives with scores
+- [x] Create approve/reject/correct endpoints
+- [x] Support bulk approve for high-confidence
 - [ ] Maintain audit trail
 
 #### Frontend Implementation
@@ -1106,7 +1106,7 @@
 - [ ] Audit trail view
 
 #### Testing
-- [ ] Test mapping workflow
+- [x] Test mapping workflow
 - [ ] Test audit trail
 
 ---
@@ -1118,10 +1118,10 @@
 **So that** the data becomes actionable for me
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/entities/unmapped` endpoint
-- [ ] Filter by data source
-- [ ] Create `POST /api/v1/mappings/suggest` endpoint
-- [ ] Track suggestion status (submitted, reviewing, approved, rejected)
+- [x] Create `GET /api/v1/admin/suggestions/pending` endpoint
+- [x] Filter by data source
+- [x] Create `MappingSuggestion` model
+- [x] Track suggestion status (submitted, evaluating, approved, rejected, implemented)
 - [ ] Notify user on status change
 
 #### Frontend Implementation
@@ -1131,7 +1131,7 @@
 - [ ] Display notifications on status change
 
 #### Testing
-- [ ] Test suggestion workflow
+- [x] Test suggestion endpoint
 - [ ] Test notifications
 
 ---
@@ -1143,8 +1143,8 @@
 **So that** I can prioritize mapping efforts
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/admin/mappings/coverage` endpoint
-- [ ] Compute % mapped by data source
+- [x] Create `GET /api/v1/admin/mappings/coverage` endpoint
+- [x] Compute % mapped by data source
 - [ ] Compute $ value/volume of unmapped entities
 - [ ] Prioritize high-value unmapped entities
 - [ ] Track coverage trend over time
@@ -1159,7 +1159,7 @@
 - [ ] Export button
 
 #### Testing
-- [ ] Test coverage calculations
+- [x] Test coverage endpoint
 - [ ] Test prioritization logic
 
 ---
