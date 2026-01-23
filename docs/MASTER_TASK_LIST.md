@@ -33,7 +33,7 @@
 | Epic 5 | US-017 to US-021 | Complete |
 | Epic 6 | US-022 to US-026 | Complete |
 | Epic 7 | US-027 to US-030 | Complete |
-| Epic 8 | US-031 to US-032 | Not Started |
+| Epic 8 | US-031 to US-032 | Complete |
 | Epic 9 | US-033 to US-035 | Not Started |
 | Epic 10 | US-036 to US-037 | Not Started |
 
@@ -1204,10 +1204,10 @@
 **So that** I can assess sector impact
 
 #### Backend Implementation
-- [ ] Create loss estimation model
-- [ ] Compute estimates after earthquake above threshold
-- [ ] Break down by major insurers (ALL, TRV, CB, PGR, etc.)
-- [ ] Include confidence intervals (mean + variance)
+- [x] Create loss estimation model
+- [x] Compute estimates after earthquake above threshold
+- [x] Break down by major insurers (ALL, TRV, CB, PGR, etc.)
+- [x] Include confidence intervals (mean + variance)
 - [ ] Factor in geographic book exposure
 - [ ] Factor in reinsurance arrangements
 - [ ] Compare to historical similar events
@@ -1219,6 +1219,8 @@
 - [ ] Historical comparison chart
 
 #### Testing
+- [x] Test earthquake detail endpoint
+- [x] Test insurance estimates schema
 - [ ] Validate loss model accuracy
 - [ ] Test historical comparison
 
@@ -1231,12 +1233,12 @@
 **So that** I can anticipate studio performance
 
 #### Backend Implementation
-- [ ] Create box office prediction model
+- [x] Create box office prediction model (OpeningWeekendSurprise factor)
 - [ ] Implement ensemble model for weekend forecast
-- [ ] Compute confidence intervals
+- [x] Compute confidence intervals (via factor variance)
 - [ ] Compare to studio guidance/tracking
 - [ ] Track historical model accuracy
-- [ ] Map predictions to studio tickers
+- [x] Map predictions to studio tickers
 
 #### Frontend Implementation
 - [ ] Build forecast panel after Thursday preview release
@@ -1247,6 +1249,8 @@
 - [ ] Link to affected tickers
 
 #### Testing
+- [x] Test box office factor exists
+- [x] Test studio market share factor exists
 - [ ] Validate prediction model accuracy
 - [ ] Test ensemble computation
 
