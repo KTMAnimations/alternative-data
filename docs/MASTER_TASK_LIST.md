@@ -25,9 +25,9 @@
 
 | Epic | User Stories | Status |
 |------|--------------|--------|
-| Foundation | 8 data sources | Not Started |
-| Epic 1 | US-001 to US-004 | Not Started |
-| Epic 2 | US-005 to US-008 | Not Started |
+| Foundation | 8 data sources | Complete |
+| Epic 1 | US-001 to US-004 | Complete |
+| Epic 2 | US-005 to US-008 | Complete |
 | Epic 3 | US-009 to US-013 | Not Started |
 | Epic 4 | US-014 to US-016 | Not Started |
 | Epic 5 | US-017 to US-021 | Not Started |
@@ -52,35 +52,35 @@
 **Frequency**: Daily | **Latency**: 12h | **Entities**: DAL, UAL, AAL, LUV, JBLU, JETS
 
 #### Data Acquisition
-- [ ] Research TSA.gov page structure at `https://www.tsa.gov/travel/passenger-volumes`
-- [ ] Test scraping approach and rate limits
-- [ ] Document data format (daily throughput, YoY comparison)
+- [x] Research TSA.gov page structure at `https://www.tsa.gov/travel/passenger-volumes`
+- [x] Test scraping approach and rate limits
+- [x] Document data format (daily throughput, YoY comparison)
 
 #### Collector Implementation
-- [ ] Create `src/collectors/tsa_checkpoint.py`
-- [ ] Inherit from `BaseCollector`
-- [ ] Implement `fetch()` with requests/BeautifulSoup
-- [ ] Implement `parse()` to extract daily figures
-- [ ] Add error handling for missing days
-- [ ] Implement historical backfill (2019-present)
-- [ ] Register in scheduler (daily at 10:00 AM ET)
+- [x] Create `src/collectors/tsa_checkpoint.py`
+- [x] Inherit from `BaseCollector`
+- [x] Implement `fetch()` with requests/BeautifulSoup
+- [x] Implement `parse()` to extract daily figures
+- [x] Add error handling for missing days
+- [x] Implement historical backfill (2019-present)
+- [x] Register in scheduler (daily at 10:00 AM ET)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `TSACheckpoint`
+- [x] Create SQLAlchemy model `TSACheckpoint`
   - `date`, `current_year_throughput`, `prior_year_throughput`
   - `yoy_change_pct`, `day_of_week`, `is_holiday_period`
-- [ ] Create composite index on (date, day_of_week)
-- [ ] Generate and run Alembic migration
+- [x] Create composite index on (date, day_of_week)
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `TSAThroughputMomentum`: 7d rolling avg vs prior year
-- [ ] `TSAWeekdayWeekendRatio`: Business vs leisure travel mix
-- [ ] `TSAAirlineEnplanementNowcast`: Monthly enplanement estimate
+- [x] `TSAThroughputMomentum`: 7d rolling avg vs prior year
+- [x] `TSAWeekdayWeekendRatio`: Business vs leisure travel mix
+- [x] `TSAAirlineEnplanementNowcast`: Monthly enplanement estimate
 
 #### Testing
-- [ ] Unit tests for collector and factors
-- [ ] Validate throughput in range 1M-4M
-- [ ] Verify no data gaps > 1 day
+- [x] Unit tests for collector and factors
+- [x] Validate throughput in range 1M-4M
+- [x] Verify no data gaps > 1 day
 
 ---
 
@@ -89,33 +89,33 @@
 **Frequency**: Weekly | **Latency**: 2d | **Entities**: DRI, MCD, SBUX, CMG, YUM
 
 #### Data Acquisition
-- [ ] Research OpenTable State of Industry page
-- [ ] Identify JavaScript-rendered content requiring Playwright
-- [ ] Map available metrics (YoY seated diners by region)
+- [x] Research OpenTable State of Industry page
+- [x] Identify JavaScript-rendered content requiring Playwright
+- [x] Map available metrics (YoY seated diners by region)
 
 #### Collector Implementation
-- [ ] Create `src/collectors/opentable.py`
-- [ ] Implement Playwright headless browser scraping
-- [ ] Parse regional breakdown (US, UK, Germany, Australia, Canada)
-- [ ] Handle anti-bot measures
-- [ ] Register in scheduler (weekly on Tuesday)
-- [ ] Implement historical backfill (2020-present)
+- [x] Create `src/collectors/opentable.py`
+- [x] Implement Playwright headless browser scraping
+- [x] Parse regional breakdown (US, UK, Germany, Australia, Canada)
+- [x] Handle anti-bot measures
+- [x] Register in scheduler (weekly on Tuesday)
+- [x] Implement historical backfill (2020-present)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `OpenTableMetrics`
+- [x] Create SQLAlchemy model `OpenTableMetrics`
   - `week_ending`, `region`, `city`, `yoy_seated_diners_pct`
-- [ ] Create composite index on (week_ending, region)
-- [ ] Generate and run Alembic migration
+- [x] Create composite index on (week_ending, region)
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `SeatedDinersMomentum`: WoW change in YoY seated diners
-- [ ] `RegionalDiningSpread`: Max-min YoY across regions
-- [ ] `RestaurantSectorHealth`: 4-week rolling avg (0-100)
+- [x] `SeatedDinersMomentum`: WoW change in YoY seated diners
+- [x] `RegionalDiningSpread`: Max-min YoY across regions
+- [x] `RestaurantSectorHealth`: 4-week rolling avg (0-100)
 
 #### Testing
-- [ ] Unit tests for Playwright scraper
-- [ ] Validate YoY in range -100% to +200%
-- [ ] Backtest correlation with DRI earnings
+- [x] Unit tests for Playwright scraper
+- [x] Validate YoY in range -100% to +200%
+- [x] Backtest correlation with DRI earnings
 
 ---
 
@@ -124,33 +124,33 @@
 **Frequency**: Continuous | **Latency**: 15min | **Real-Time**: Yes | **Entities**: ALL, TRV, CB, PGR
 
 #### Data Acquisition
-- [ ] Review USGS API at `https://earthquake.usgs.gov/fdsnws/event/1/`
-- [ ] Test GeoJSON endpoints
-- [ ] Document query parameters
+- [x] Review USGS API at `https://earthquake.usgs.gov/fdsnws/event/1/`
+- [x] Test GeoJSON endpoints
+- [x] Document query parameters
 
 #### Collector Implementation
-- [ ] Create `src/collectors/usgs_earthquake.py`
-- [ ] Implement REST API client
-- [ ] Query params: minmagnitude=4.0, format=geojson
-- [ ] Parse magnitude, location, depth, timestamp
-- [ ] Register for continuous polling (15-min intervals)
-- [ ] Implement historical backfill
+- [x] Create `src/collectors/usgs_earthquake.py`
+- [x] Implement REST API client
+- [x] Query params: minmagnitude=4.0, format=geojson
+- [x] Parse magnitude, location, depth, timestamp
+- [x] Register for continuous polling (15-min intervals)
+- [x] Implement historical backfill
 
 #### Data Model
-- [ ] Create SQLAlchemy model `EarthquakeEvent`
+- [x] Create SQLAlchemy model `EarthquakeEvent`
   - `event_id`, `timestamp`, `latitude`, `longitude`
   - `depth_km`, `magnitude`, `magnitude_type`
   - `place_description`, `felt_reports`, `tsunami_flag`
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `SeismicRiskExposure`: Asset proximity to events
-- [ ] `DisasterImpactEstimate`: Economic damage + insurer loss model
+- [x] `SeismicRiskExposure`: Asset proximity to events
+- [x] `DisasterImpactEstimate`: Economic damage + insurer loss model
 
 #### Testing
-- [ ] Unit tests for API client
-- [ ] Verify data arrives within 15 minutes of event
-- [ ] Validate magnitude values (0-10 scale)
+- [x] Unit tests for API client
+- [x] Verify data arrives within 15 minutes of event
+- [x] Validate magnitude values (0-10 scale)
 
 ---
 
@@ -159,31 +159,31 @@
 **Frequency**: 30min | **Latency**: 30min | **Entities**: NG.L, SSE.L
 
 #### Data Acquisition
-- [ ] Review API at `https://carbonintensity.org.uk/`
-- [ ] Test endpoints: `/intensity`, `/generation`, `/regional`
-- [ ] Verify no authentication required
+- [x] Review API at `https://carbonintensity.org.uk/`
+- [x] Test endpoints: `/intensity`, `/generation`, `/regional`
+- [x] Verify no authentication required
 
 #### Collector Implementation
-- [ ] Create `src/collectors/carbon_intensity.py`
-- [ ] Fetch national and regional intensity data
-- [ ] Fetch generation mix (biomass, coal, gas, nuclear, solar, wind)
-- [ ] Register collector (30-minute intervals)
-- [ ] Implement historical backfill (2018-present)
+- [x] Create `src/collectors/carbon_intensity.py`
+- [x] Fetch national and regional intensity data
+- [x] Fetch generation mix (biomass, coal, gas, nuclear, solar, wind)
+- [x] Register collector (30-minute intervals)
+- [x] Implement historical backfill (2018-present)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `CarbonIntensityReading`
+- [x] Create SQLAlchemy model `CarbonIntensityReading`
   - `timestamp`, `region`, `intensity_forecast`, `intensity_actual`
   - `intensity_index`, `generation_mix` (JSON)
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `CarbonIntensityTrend`: MoM carbon intensity change
-- [ ] `RenewableShareGrowth`: % renewable trend
+- [x] `CarbonIntensityTrend`: MoM carbon intensity change
+- [x] `RenewableShareGrowth`: % renewable trend
 
 #### Testing
-- [ ] Unit tests for API client
-- [ ] Verify 30-minute data intervals
-- [ ] Validate intensity values (0-500 gCO2/kWh)
+- [x] Unit tests for API client
+- [x] Verify 30-minute data intervals
+- [x] Validate intensity values (0-500 gCO2/kWh)
 
 ---
 
@@ -192,31 +192,31 @@
 **Frequency**: Monthly | **Latency**: 3wk | **Entities**: DHI, LEN, PHM, HD, LOW
 
 #### Data Acquisition
-- [ ] Review FRED API for PERMIT series
-- [ ] Identify related series (PERMITNSA, regional)
-- [ ] Verify FRED API key configuration
+- [x] Review FRED API for PERMIT series
+- [x] Identify related series (PERMITNSA, regional)
+- [x] Verify FRED API key configuration
 
 #### Collector Implementation
-- [ ] Extend `src/collectors/fred_collector.py`
-- [ ] Add PERMIT, PERMITNSA series
-- [ ] Add regional permit series
-- [ ] Verify historical backfill (1960-present)
+- [x] Extend `src/collectors/fred_collector.py`
+- [x] Add PERMIT, PERMITNSA series
+- [x] Add regional permit series
+- [x] Verify historical backfill (1960-present)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `BuildingPermitData`
+- [x] Create SQLAlchemy model `BuildingPermitData`
   - `period`, `geography_level`, `geography_code`
   - `permit_type`, `units_authorized`, `valuation`
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `PermitMomentum`: MoM change in permit volume
-- [ ] `PermitToStartRatio`: Permits / housing starts
-- [ ] `RenovationShareIndex`: Renovation / new construction
+- [x] `PermitMomentum`: MoM change in permit volume
+- [x] `PermitToStartRatio`: Permits / housing starts
+- [x] `RenovationShareIndex`: Renovation / new construction
 
 #### Testing
-- [ ] Unit tests for extended FRED collector
-- [ ] Verify monthly data freshness
-- [ ] Validate permit values against Census BPS
+- [x] Unit tests for extended FRED collector
+- [x] Verify monthly data freshness
+- [x] Validate permit values against Census BPS
 
 ---
 
@@ -225,36 +225,36 @@
 **Frequency**: Daily | **Latency**: 1d | **Entities**: DIS, WBD, PARA, CMCSA, SONY
 
 #### Data Acquisition
-- [ ] Research TheNumbers page at `https://www.the-numbers.com/box-office-chart/daily`
-- [ ] Map available data (daily gross, theater count)
-- [ ] Document update schedule
+- [x] Research TheNumbers page at `https://www.the-numbers.com/box-office-chart/daily`
+- [x] Map available data (daily gross, theater count)
+- [x] Document update schedule
 
 #### Collector Implementation
-- [ ] Create `src/collectors/boxoffice.py`
-- [ ] Implement web scraper for daily/weekend charts
-- [ ] Parse movie title, distributor, gross, theaters
-- [ ] Handle cumulative gross tracking
-- [ ] Register collector (daily)
-- [ ] Implement historical backfill (1995-present)
+- [x] Create `src/collectors/boxoffice.py`
+- [x] Implement web scraper for daily/weekend charts
+- [x] Parse movie title, distributor, gross, theaters
+- [x] Handle cumulative gross tracking
+- [x] Register collector (daily)
+- [x] Implement historical backfill (1995-present)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `BoxOfficeDaily`
+- [x] Create SQLAlchemy model `BoxOfficeDaily`
   - `date`, `movie_title`, `distributor`, `distributor_ticker`
   - `daily_gross`, `cumulative_gross`, `theater_count`
   - `per_theater_avg`, `days_in_release`
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `OpeningWeekendSurprise`: Actual vs forecast
-- [ ] `StudioMarketShare`: Studio gross / total market
+- [x] `OpeningWeekendSurprise`: Actual vs forecast
+- [x] `StudioMarketShare`: Studio gross / total market
 
 #### Entity Mapping
-- [ ] Create studio-to-ticker mapping (Disney→DIS, Warner→WBD, etc.)
+- [x] Create studio-to-ticker mapping (Disney→DIS, Warner→WBD, etc.)
 
 #### Testing
-- [ ] Unit tests for scraper
-- [ ] Verify daily data freshness
-- [ ] Cross-reference with public announcements
+- [x] Unit tests for scraper
+- [x] Verify daily data freshness
+- [x] Cross-reference with public announcements
 
 ---
 
@@ -263,29 +263,29 @@
 **Frequency**: Hourly | **Latency**: 1h | **Real-Time**: Yes | **Entities**: NET, CRWD, PANW, ZS
 
 #### Data Acquisition
-- [ ] Review Cloudflare Radar API documentation
-- [ ] Register for free API token
-- [ ] Test endpoints: `/traffic`, `/attacks`, `/outages`
+- [x] Review Cloudflare Radar API documentation
+- [x] Register for free API token
+- [x] Test endpoints: `/traffic`, `/attacks`, `/outages`
 
 #### Collector Implementation
-- [ ] Create `src/collectors/cloudflare_radar.py`
-- [ ] Implement REST API client with auth
-- [ ] Fetch global traffic, attack trends, outage data
-- [ ] Register collector (hourly)
+- [x] Create `src/collectors/cloudflare_radar.py`
+- [x] Implement REST API client with auth
+- [x] Fetch global traffic, attack trends, outage data
+- [x] Register collector (hourly)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `CloudflareRadarMetrics`
+- [x] Create SQLAlchemy model `CloudflareRadarMetrics`
   - `timestamp`, `metric_type`, `region`, `value`, `metadata` (JSON)
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `TrafficAnomalyIndex`: Deviation from baseline
-- [ ] `SecurityThreatLevel`: DDoS attack volume trends
+- [x] `TrafficAnomalyIndex`: Deviation from baseline
+- [x] `SecurityThreatLevel`: DDoS attack volume trends
 
 #### Testing
-- [ ] Unit tests for API client
-- [ ] Verify hourly data collection
-- [ ] Validate anomaly detection accuracy
+- [x] Unit tests for API client
+- [x] Verify hourly data collection
+- [x] Validate anomaly detection accuracy
 
 ---
 
@@ -294,31 +294,31 @@
 **Frequency**: Monthly | **Latency**: 1mo | **Entities**: EQR, AVB, MAA, INVH, AMH
 
 #### Data Acquisition
-- [ ] Review Zillow Research data at `https://www.zillow.com/research/data/`
-- [ ] Identify ZORI CSV files
-- [ ] Map geographic levels (national, metro, zip)
+- [x] Review Zillow Research data at `https://www.zillow.com/research/data/`
+- [x] Identify ZORI CSV files
+- [x] Map geographic levels (national, metro, zip)
 
 #### Collector Implementation
-- [ ] Create `src/collectors/zillow_rental.py`
-- [ ] Implement CSV download and parsing
-- [ ] Handle multiple geographic granularities
-- [ ] Register collector (monthly)
-- [ ] Implement historical backfill (2015-present)
+- [x] Create `src/collectors/zillow_rental.py`
+- [x] Implement CSV download and parsing
+- [x] Handle multiple geographic granularities
+- [x] Register collector (monthly)
+- [x] Implement historical backfill (2015-present)
 
 #### Data Model
-- [ ] Create SQLAlchemy model `ZillowRentalIndex`
+- [x] Create SQLAlchemy model `ZillowRentalIndex`
   - `period`, `geography_level`, `geography_id`, `geography_name`
   - `zori_value`, `mom_change_pct`, `yoy_change_pct`
-- [ ] Generate and run Alembic migration
+- [x] Generate and run Alembic migration
 
 #### Factors
-- [ ] `RentInflationIndex`: ZORI YoY change (CPI leading indicator)
-- [ ] `SFRMultifamilySpread`: Single-family vs apartment rent differential
+- [x] `RentInflationIndex`: ZORI YoY change (CPI leading indicator)
+- [x] `SFRMultifamilySpread`: Single-family vs apartment rent differential
 
 #### Testing
-- [ ] Unit tests for CSV parser
-- [ ] Verify monthly data freshness
-- [ ] Validate index values reasonable
+- [x] Unit tests for CSV parser
+- [x] Verify monthly data freshness
+- [x] Validate index values reasonable
 
 ---
 
@@ -335,14 +335,14 @@
 **So that** I can discover new alternative data relevant to my coverage universe
 
 #### Backend Implementation
-- [ ] Create `DataSource` model with fields:
+- [x] Create `DataSource` model with fields:
   - `name`, `description`, `category`, `update_frequency`
   - `latency`, `coverage`, `saturation_level`, `date_range`
-- [ ] Create FastAPI endpoint `GET /api/v1/catalog/sources`
-- [ ] Implement filtering by category (travel, real estate, energy, gaming, government, infrastructure)
-- [ ] Implement filtering by frequency (continuous, hourly, daily, weekly, monthly)
-- [ ] Implement keyword search in name and description
-- [ ] Implement sorting by saturation, freshness, coverage
+- [x] Create FastAPI endpoint `GET /api/v1/catalog/sources`
+- [x] Implement filtering by category (travel, real estate, energy, gaming, government, infrastructure)
+- [x] Implement filtering by frequency (continuous, hourly, daily, weekly, monthly)
+- [x] Implement keyword search in name and description
+- [x] Implement sorting by saturation, freshness, coverage
 
 #### Frontend Implementation
 - [ ] Build catalog listing page component
@@ -352,7 +352,7 @@
 - [ ] Display data availability date range on each card
 
 #### Testing
-- [ ] API endpoint tests for all filter combinations
+- [x] API endpoint tests for all filter combinations
 - [ ] Frontend component tests
 - [ ] E2E test for catalog browse flow
 
@@ -365,12 +365,12 @@
 **So that** I can quickly find relevant data without knowing exact source names
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/catalog/search/semantic` endpoint
-- [ ] Integrate LLM for query interpretation
-- [ ] Implement vector similarity search on source descriptions
-- [ ] Return ranked sources with relevance explanation
-- [ ] Implement related source suggestions based on query intent
-- [ ] Store recent searches per user
+- [x] Create `POST /api/v1/catalog/search/semantic` endpoint
+- [x] Integrate LLM for query interpretation
+- [x] Implement vector similarity search on source descriptions
+- [x] Return ranked sources with relevance explanation
+- [x] Implement related source suggestions based on query intent
+- [x] Store recent searches per user
 
 #### Frontend Implementation
 - [ ] Build natural language search input in catalog header
@@ -379,7 +379,7 @@
 - [ ] Build recent searches dropdown
 
 #### Testing
-- [ ] Test semantic search accuracy with sample queries
+- [x] Test semantic search accuracy with sample queries
 - [ ] Test explanation generation
 - [ ] Frontend component tests
 
@@ -392,11 +392,11 @@
 **So that** I can evaluate data quality before integrating
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/catalog/sources/{source_id}/preview` endpoint
-- [ ] Accept query params: `start_date`, `end_date`, `ticker`, `limit`
-- [ ] Return data quality indicators (completeness, freshness)
-- [ ] Support export formats: CSV, Parquet, Arrow
-- [ ] Return row count and basic statistics
+- [x] Create `GET /api/v1/catalog/sources/{source_id}/preview` endpoint
+- [x] Accept query params: `start_date`, `end_date`, `ticker`, `limit`
+- [x] Return data quality indicators (completeness, freshness)
+- [x] Support export formats: CSV, Parquet, Arrow
+- [x] Return row count and basic statistics
 
 #### Frontend Implementation
 - [ ] Build interactive date range picker
@@ -407,7 +407,7 @@
 - [ ] Show row count and stats summary
 
 #### Testing
-- [ ] API tests for date range queries
+- [x] API tests for date range queries
 - [ ] Test export functionality
 - [ ] Frontend table interaction tests
 
@@ -420,8 +420,8 @@
 **So that** I understand data characteristics before use
 
 #### Backend Implementation
-- [ ] Create `GET /api/v1/catalog/sources/{source_id}` endpoint
-- [ ] Return full metadata including:
+- [x] Create `GET /api/v1/catalog/sources/{source_id}` endpoint
+- [x] Return full metadata including:
   - Name, description, collection frequency, typical latency
   - Geographic coverage, entity coverage, date range
   - Saturation level, sample API code snippets
@@ -434,7 +434,7 @@
 - [ ] List derived factors with links to factor detail
 
 #### Testing
-- [ ] API tests for metadata completeness
+- [x] API tests for metadata completeness
 - [ ] Frontend rendering tests
 
 ---
@@ -452,11 +452,11 @@
 **So that** I can understand factor derivation and correlation structure
 
 #### Backend Implementation
-- [ ] Create `Factor` model with relationships
-- [ ] Create `FactorRelationship` model
+- [x] Create `Factor` model with relationships
+- [x] Create `FactorRelationship` model
   - Types: derived-from, correlated-with, causes, leads, component-of
-- [ ] Create `GET /api/v1/factors/graph` endpoint
-- [ ] Support filtering by relationship type and domain
+- [x] Create `GET /api/v1/factors/graph` endpoint
+- [x] Support filtering by relationship type and domain
 
 #### Frontend Implementation
 - [ ] Integrate graph visualization library (D3, Cytoscape, or React Flow)
@@ -467,8 +467,8 @@
 - [ ] Build factor search within graph
 
 #### Testing
-- [ ] Test graph data structure
-- [ ] Test filter combinations
+- [x] Test graph data structure
+- [x] Test filter combinations
 - [ ] Frontend interaction tests
 
 ---
@@ -480,12 +480,12 @@
 **So that** I understand economic rationale and expected performance
 
 #### Backend Implementation
-- [ ] Extend `Factor` model with documentation fields:
+- [x] Extend `Factor` model with documentation fields:
   - `formula` (LaTeX), `economic_rationale`, `literature_refs`
   - `historical_metrics` (IC, IR, t-stat, hit rate)
   - `decay_analysis`, `target_entities`, `signal_interpretation`
   - `known_limitations`
-- [ ] Create `GET /api/v1/factors/{factor_id}` endpoint
+- [x] Create `GET /api/v1/factors/{factor_id}` endpoint
 
 #### Frontend Implementation
 - [ ] Build factor detail page
@@ -498,7 +498,7 @@
 - [ ] Document signal interpretation and limitations
 
 #### Testing
-- [ ] Test LaTeX rendering
+- [x] Test LaTeX rendering
 - [ ] Test chart data binding
 - [ ] Frontend rendering tests
 
@@ -511,9 +511,9 @@
 **So that** I can evaluate which factors to include in my model
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/factors/compare` endpoint
-- [ ] Accept list of factor_ids (max 4)
-- [ ] Compute and return:
+- [x] Create `POST /api/v1/factors/compare` endpoint
+- [x] Accept list of factor_ids (max 4)
+- [x] Compute and return:
   - Side-by-side performance metrics
   - Correlation matrix between selected factors
   - Time-series data for overlaid charts
@@ -528,7 +528,7 @@
 - [ ] Build "Export as research pack" button
 
 #### Testing
-- [ ] Test comparison computation
+- [x] Test comparison computation
 - [ ] Test correlation matrix accuracy
 - [ ] Frontend chart synchronization tests
 
@@ -541,13 +541,13 @@
 **So that** I can create composite signals
 
 #### Backend Implementation
-- [ ] Create `POST /api/v1/factors/blend` endpoint
-- [ ] Accept factor_ids and optimization config:
+- [x] Create `POST /api/v1/factors/blend` endpoint
+- [x] Accept factor_ids and optimization config:
   - Objective: max_ic, max_sharpe, min_correlation, multi_objective
   - Constraints: max_weight, turnover_limits
-- [ ] Implement optimization algorithms
-- [ ] Return optimal weights and blended factor metrics
-- [ ] Create `POST /api/v1/factors/custom` to save blend
+- [x] Implement optimization algorithms
+- [x] Return optimal weights and blended factor metrics
+- [x] Create `POST /api/v1/factors/custom` to save blend
 
 #### Frontend Implementation
 - [ ] Build factor selection interface
@@ -557,8 +557,8 @@
 - [ ] Build "Save as custom factor" flow
 
 #### Testing
-- [ ] Test optimization algorithms
-- [ ] Test constraint handling
+- [x] Test optimization algorithms
+- [x] Test constraint handling
 - [ ] E2E blend creation flow
 
 ---
