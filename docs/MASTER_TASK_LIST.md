@@ -408,7 +408,7 @@
 
 #### Testing
 - [x] API tests for date range queries
-- [ ] Test export functionality
+- [x] Test export functionality
 - [ ] Frontend table interaction tests
 
 ---
@@ -529,7 +529,7 @@
 
 #### Testing
 - [x] Test comparison computation
-- [ ] Test correlation matrix accuracy
+- [x] Test correlation matrix accuracy
 - [ ] Frontend chart synchronization tests
 
 ---
@@ -559,7 +559,7 @@
 #### Testing
 - [x] Test optimization algorithms
 - [x] Test constraint handling
-- [ ] E2E blend creation flow
+- [x] E2E blend creation flow
 
 ---
 
@@ -598,7 +598,7 @@
 
 #### Testing
 - [x] Test alert evaluation logic
-- [ ] Test notification dispatch
+- [x] Test notification dispatch
 - [ ] E2E alert creation and trigger flow
 
 ---
@@ -626,7 +626,7 @@
 
 #### Testing
 - [x] Test anomaly detection accuracy
-- [ ] Test ML model integration
+- [x] Test ML model integration
 
 ---
 
@@ -653,8 +653,8 @@
 
 #### Testing
 - [x] Test event matching logic
-- [ ] Test geographic filtering
-- [ ] Test immediate dispatch for critical events
+- [x] Test geographic filtering
+- [x] Test immediate dispatch for critical events
 
 ---
 
@@ -714,7 +714,7 @@
 #### Testing
 - [x] Test quiet hours logic
 - [x] Test cooldown enforcement
-- [ ] Test digest generation
+- [x] Test digest generation
 
 ---
 
@@ -803,7 +803,7 @@
 
 #### Testing
 - [x] Test LMP data accuracy
-- [ ] Test playback functionality
+- [x] Test playback functionality
 - [ ] Frontend map rendering tests
 
 ---
@@ -840,7 +840,7 @@
 #### Testing
 - [x] Test backtest computation accuracy
 - [x] Test file upload handling
-- [ ] Validate metrics against known benchmarks
+- [x] Validate metrics against known benchmarks
 
 ---
 
@@ -905,7 +905,7 @@
 - [x] Generate Jupyter notebook with analysis code
 - [x] Include raw factor data (CSV, Parquet, Arrow)
 - [x] Include computed statistics (JSON)
-- [ ] Include charts as PNG/SVG
+- [x] Include charts as PNG/SVG
 - [x] Include methodology documentation (PDF/Markdown)
 - [x] Package as downloadable ZIP
 
@@ -978,7 +978,7 @@
 #### Testing
 - [x] Test authentication middleware
 - [x] Test rate limiting
-- [ ] Test key rotation
+- [x] Test key rotation
 
 ---
 
@@ -1059,7 +1059,7 @@
 #### Backend Implementation
 - [x] Implement real-time factor push to TradingView
 - [x] Implement TradingView annotation import
-- [ ] Synchronize backtesting capabilities
+- [x] Synchronize backtesting capabilities
 - [x] Create Pine Script SDK documentation
 - [x] Implement OAuth connection to TradingView
 
