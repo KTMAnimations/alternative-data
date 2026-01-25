@@ -345,16 +345,16 @@
 - [x] Implement sorting by saturation, freshness, coverage
 
 #### Frontend Implementation
-- [ ] Build catalog listing page component
-- [ ] Build filter sidebar with category/frequency checkboxes
-- [ ] Build search input with debounced queries
-- [ ] Build sort dropdown
-- [ ] Display data availability date range on each card
+- [x] Build catalog listing page component
+- [x] Build filter sidebar with category/frequency checkboxes
+- [x] Build search input with debounced queries
+- [x] Build sort dropdown
+- [x] Display data availability date range on each card
 
 #### Testing
 - [x] API endpoint tests for all filter combinations
-- [ ] Frontend component tests
-- [ ] E2E test for catalog browse flow
+- [x] Frontend component tests
+- [x] E2E test for catalog browse flow
 
 ---
 
@@ -373,15 +373,15 @@
 - [x] Store recent searches per user
 
 #### Frontend Implementation
-- [ ] Build natural language search input in catalog header
-- [ ] Display results with "Why this matches" explanation
-- [ ] Show "Related sources" section
-- [ ] Build recent searches dropdown
+- [x] Build natural language search input in catalog header
+- [x] Display results with "Why this matches" explanation
+- [x] Show "Related sources" section
+- [x] Build recent searches dropdown
 
 #### Testing
 - [x] Test semantic search accuracy with sample queries
-- [ ] Test explanation generation
-- [ ] Frontend component tests
+- [x] Test explanation generation
+- [x] Frontend component tests
 
 ---
 
@@ -399,17 +399,17 @@
 - [x] Return row count and basic statistics
 
 #### Frontend Implementation
-- [ ] Build interactive date range picker
-- [ ] Build sortable, filterable data table
-- [ ] Display quality indicators (completeness %, last updated)
-- [ ] Build entity/ticker filter
-- [ ] Build export buttons (CSV, Parquet, Arrow)
-- [ ] Show row count and stats summary
+- [x] Build interactive date range picker
+- [x] Build sortable, filterable data table
+- [x] Display quality indicators (completeness %, last updated)
+- [x] Build entity/ticker filter
+- [x] Build export buttons (CSV, Parquet, Arrow)
+- [x] Show row count and stats summary
 
 #### Testing
 - [x] API tests for date range queries
 - [x] Test export functionality
-- [ ] Frontend table interaction tests
+- [x] Frontend table interaction tests
 
 ---
 
@@ -428,14 +428,14 @@
   - List of derived factors
 
 #### Frontend Implementation
-- [ ] Build source detail page
-- [ ] Display metadata in organized sections
-- [ ] Show sample code snippets with copy button
-- [ ] List derived factors with links to factor detail
+- [x] Build source detail page
+- [x] Display metadata in organized sections
+- [x] Show sample code snippets with copy button
+- [x] List derived factors with links to factor detail
 
 #### Testing
 - [x] API tests for metadata completeness
-- [ ] Frontend rendering tests
+- [x] Frontend rendering tests
 
 ---
 
@@ -459,17 +459,17 @@
 - [x] Support filtering by relationship type and domain
 
 #### Frontend Implementation
-- [ ] Integrate graph visualization library (D3, Cytoscape, or React Flow)
-- [ ] Build interactive graph with zoom, pan, cluster controls
-- [ ] Implement node click to expand details panel
-- [ ] Build edge type filter
-- [ ] Build domain filter (travel, real estate, etc.)
-- [ ] Build factor search within graph
+- [x] Integrate graph visualization library (D3, Cytoscape, or React Flow)
+- [x] Build interactive graph with zoom, pan, cluster controls
+- [x] Implement node click to expand details panel
+- [x] Build edge type filter
+- [x] Build domain filter (travel, real estate, etc.)
+- [x] Build factor search within graph
 
 #### Testing
 - [x] Test graph data structure
 - [x] Test filter combinations
-- [ ] Frontend interaction tests
+- [x] Frontend interaction tests
 
 ---
 
@@ -488,19 +488,19 @@
 - [x] Create `GET /api/v1/factors/{factor_id}` endpoint
 
 #### Frontend Implementation
-- [ ] Build factor detail page
-- [ ] Render formula with math notation (KaTeX/MathJax)
-- [ ] Display economic rationale paragraphs
-- [ ] Show literature references with clickable links
-- [ ] Build historical metrics table
-- [ ] Build decay analysis chart (IC at 1d, 5d, 10d, 21d, 63d horizons)
-- [ ] List target entities
-- [ ] Document signal interpretation and limitations
+- [x] Build factor detail page
+- [x] Render formula with math notation (KaTeX/MathJax)
+- [x] Display economic rationale paragraphs
+- [x] Show literature references with clickable links
+- [x] Build historical metrics table
+- [x] Build decay analysis chart (IC at 1d, 5d, 10d, 21d, 63d horizons)
+- [x] List target entities
+- [x] Document signal interpretation and limitations
 
 #### Testing
 - [x] Test LaTeX rendering
-- [ ] Test chart data binding
-- [ ] Frontend rendering tests
+- [x] Test chart data binding
+- [x] Frontend rendering tests
 
 ---
 
@@ -520,17 +520,17 @@
   - Statistical significance flags
 
 #### Frontend Implementation
-- [ ] Build factor selector (multi-select, max 4)
-- [ ] Build side-by-side metrics comparison table
-- [ ] Build correlation matrix heatmap
-- [ ] Build overlaid time-series chart with date sync
-- [ ] Highlight statistically significant differences
-- [ ] Build "Export as research pack" button
+- [x] Build factor selector (multi-select, max 4)
+- [x] Build side-by-side metrics comparison table
+- [x] Build correlation matrix heatmap
+- [x] Build overlaid time-series chart with date sync
+- [x] Highlight statistically significant differences
+- [x] Build "Export as research pack" button
 
 #### Testing
 - [x] Test comparison computation
 - [x] Test correlation matrix accuracy
-- [ ] Frontend chart synchronization tests
+- [x] Frontend chart synchronization tests
 
 ---
 
@@ -550,11 +550,11 @@
 - [x] Create `POST /api/v1/factors/custom` to save blend
 
 #### Frontend Implementation
-- [ ] Build factor selection interface
-- [ ] Build optimization objective selector
-- [ ] Build constraints configuration form
-- [ ] Display optimization results (weights, metrics)
-- [ ] Build "Save as custom factor" flow
+- [x] Build factor selection interface
+- [x] Build optimization objective selector
+- [x] Build constraints configuration form
+- [x] Display optimization results (weights, metrics)
+- [x] Build "Save as custom factor" flow
 
 #### Testing
 - [x] Test optimization algorithms
@@ -587,19 +587,19 @@
 - [x] Implement test alert functionality
 
 #### Frontend Implementation
-- [ ] Build alert creation form
-- [ ] Factor dropdown selector
-- [ ] Ticker input (single or list)
-- [ ] Threshold value input
-- [ ] Direction selector
-- [ ] Notification channel selector
-- [ ] Enable/disable toggle
-- [ ] Test alert button
+- [x] Build alert creation form
+- [x] Factor dropdown selector
+- [x] Ticker input (single or list)
+- [x] Threshold value input
+- [x] Direction selector
+- [x] Notification channel selector
+- [x] Enable/disable toggle
+- [x] Test alert button
 
 #### Testing
 - [x] Test alert evaluation logic
 - [x] Test notification dispatch
-- [ ] E2E alert creation and trigger flow
+- [x] E2E alert creation and trigger flow
 
 ---
 
@@ -618,11 +618,11 @@
 - [x] Create endpoint to list recent anomalies
 
 #### Frontend Implementation
-- [ ] Build anomaly alert configuration form
-- [ ] Sensitivity slider (std devs)
-- [ ] Baseline period selector
-- [ ] ML option toggle
-- [ ] Recent anomalies display
+- [x] Build anomaly alert configuration form
+- [x] Sensitivity slider (std devs)
+- [x] Baseline period selector
+- [x] ML option toggle
+- [x] Recent anomalies display
 
 #### Testing
 - [x] Test anomaly detection accuracy
@@ -645,11 +645,11 @@
 - [x] Implement critical event immediate dispatch
 
 #### Frontend Implementation
-- [ ] Build event alert configuration form
-- [ ] Event type selector
-- [ ] Event criteria inputs
-- [ ] Geographic filter (map-based or dropdown)
-- [ ] Impact estimation toggle
+- [x] Build event alert configuration form
+- [x] Event type selector
+- [x] Event criteria inputs
+- [x] Geographic filter (map-based or dropdown)
+- [x] Impact estimation toggle
 
 #### Testing
 - [x] Test event matching logic
@@ -674,9 +674,9 @@
 - [x] Create Python SDK wrapper
 
 #### Frontend Implementation
-- [ ] Build WebSocket connection management
-- [ ] Build subscription configuration UI
-- [ ] Display real-time updates
+- [x] Build WebSocket connection management
+- [x] Build subscription configuration UI
+- [x] Display real-time updates
 
 #### SDK Implementation
 - [x] Create `altdata.stream` module in Python SDK
@@ -706,10 +706,10 @@
 - [x] Create alert history endpoint with read/unread status
 
 #### Frontend Implementation
-- [ ] Build quiet hours configuration
-- [ ] Build cooldown period input
-- [ ] Build digest vs real-time toggle
-- [ ] Build alert history view with read/unread
+- [x] Build quiet hours configuration
+- [x] Build cooldown period input
+- [x] Build digest vs real-time toggle
+- [x] Build alert history view with read/unread
 
 #### Testing
 - [x] Test quiet hours logic
@@ -739,11 +739,11 @@
 - [x] Compute insurance loss estimates by insurer
 
 #### Frontend Implementation
-- [ ] Integrate map library (Mapbox, Leaflet, or Google Maps)
-- [ ] Display earthquake markers sized by magnitude
-- [ ] Build magnitude filter slider
-- [ ] Build date range filter
-- [ ] Implement marker click for details panel:
+- [x] Integrate map library (Mapbox, Leaflet, or Google Maps)
+- [x] Display earthquake markers sized by magnitude
+- [x] Build magnitude filter slider
+- [x] Build date range filter
+- [x] Implement marker click for details panel:
   - Magnitude, depth, location, timestamp
   - Population within radius
   - Economic impact estimate
@@ -752,7 +752,7 @@
 #### Testing
 - [x] Test GeoJSON formatting
 - [x] Test impact calculations
-- [ ] Frontend map interaction tests
+- [x] Frontend map interaction tests
 
 ---
 
@@ -769,10 +769,10 @@
 - [x] Implement endpoint to preview which events would trigger
 
 #### Frontend Implementation
-- [ ] Build region definition interface (draw on map or select preset)
-- [ ] Build threshold configuration per region
-- [ ] Display default thresholds (lower near population centers)
-- [ ] Build preview of recent triggering events
+- [x] Build region definition interface (draw on map or select preset)
+- [x] Build threshold configuration per region
+- [x] Display default thresholds (lower near population centers)
+- [x] Build preview of recent triggering events
 
 #### Testing
 - [x] Test threshold evaluation by region
@@ -794,17 +794,17 @@
 - [x] Include renewable generation share overlay
 
 #### Frontend Implementation
-- [ ] Build map showing ISO regions
-- [ ] Implement heat map overlay of LMP prices
-- [ ] Build historical playback slider
-- [ ] Implement node click for price history chart
-- [ ] Build price percentile filter
-- [ ] Build renewable share overlay toggle
+- [x] Build map showing ISO regions
+- [x] Implement heat map overlay of LMP prices
+- [x] Build historical playback slider
+- [x] Implement node click for price history chart
+- [x] Build price percentile filter
+- [x] Build renewable share overlay toggle
 
 #### Testing
 - [x] Test LMP data accuracy
 - [x] Test playback functionality
-- [ ] Frontend map rendering tests
+- [x] Frontend map rendering tests
 
 ---
 
@@ -830,12 +830,12 @@
 - [x] Flag survivorship bias warnings
 
 #### Frontend Implementation
-- [ ] Build return data upload interface
-- [ ] Build factor and date range selection
-- [ ] Display metrics table (IC, IR, t-stat, hit rate)
-- [ ] Build decile spread chart
-- [ ] Build monthly IC time series chart
-- [ ] Display survivorship bias warnings
+- [x] Build return data upload interface
+- [x] Build factor and date range selection
+- [x] Display metrics table (IC, IR, t-stat, hit rate)
+- [x] Build decile spread chart
+- [x] Build monthly IC time series chart
+- [x] Display survivorship bias warnings
 
 #### Testing
 - [x] Test backtest computation accuracy
@@ -857,9 +857,9 @@
 - [x] Support multi-factor comparison
 
 #### Frontend Implementation
-- [ ] Build decay curve chart
-- [ ] Display half-life estimate
-- [ ] Build multi-factor overlay for comparison
+- [x] Build decay curve chart
+- [x] Display half-life estimate
+- [x] Build multi-factor overlay for comparison
 
 #### Testing
 - [x] Test decay computation
@@ -882,11 +882,11 @@
 - [x] Support seasonal adjustment of factor values
 
 #### Frontend Implementation
-- [ ] Build day-of-week IC chart
-- [ ] Build monthly IC chart
-- [ ] Highlight holiday effects
-- [ ] Display event-based patterns
-- [ ] Build seasonal adjustment toggle
+- [x] Build day-of-week IC chart
+- [x] Build monthly IC chart
+- [x] Highlight holiday effects
+- [x] Display event-based patterns
+- [x] Build seasonal adjustment toggle
 
 #### Testing
 - [x] Test seasonality computation
@@ -910,9 +910,9 @@
 - [x] Package as downloadable ZIP
 
 #### Frontend Implementation
-- [ ] Build export button on factor detail page
-- [ ] Show export progress indicator
-- [ ] Download ZIP on completion
+- [x] Build export button on factor detail page
+- [x] Show export progress indicator
+- [x] Download ZIP on completion
 
 #### Testing
 - [x] Test export endpoint exists
@@ -937,10 +937,10 @@
 - [x] Support promoting winning variant
 
 #### Frontend Implementation
-- [ ] Build experiment creation form
-- [ ] Display parallel metrics tracking
-- [ ] Show statistical significance results
-- [ ] Build "Promote to production" button
+- [x] Build experiment creation form
+- [x] Display parallel metrics tracking
+- [x] Show statistical significance results
+- [x] Build "Promote to production" button
 
 #### Testing
 - [x] Test experiment tracking
@@ -969,11 +969,11 @@
 - [x] Track usage statistics per key
 
 #### Frontend Implementation
-- [ ] Build API key management in user settings
-- [ ] Key generation with copy-once display
-- [ ] Show active keys with usage stats
-- [ ] Key rotation interface
-- [ ] Usage dashboard (requests, data volume)
+- [x] Build API key management in user settings
+- [x] Key generation with copy-once display
+- [x] Show active keys with usage stats
+- [x] Key rotation interface
+- [x] Usage dashboard (requests, data volume)
 
 #### Testing
 - [x] Test authentication middleware
@@ -1038,10 +1038,10 @@
 - [x] Generate TradingView setup instructions
 
 #### Frontend Implementation
-- [ ] Build "Generate Pine Script" button on factor page
-- [ ] Display generated code in modal
-- [ ] Copy to clipboard button
-- [ ] Show setup instructions
+- [x] Build "Generate Pine Script" button on factor page
+- [x] Display generated code in modal
+- [x] Copy to clipboard button
+- [x] Show setup instructions
 
 #### Testing
 - [x] Test factor decay endpoint exists (prerequisite)
@@ -1064,9 +1064,9 @@
 - [x] Implement OAuth connection to TradingView
 
 #### Frontend Implementation
-- [ ] Build TradingView connection setup
-- [ ] Display sync status
-- [ ] Build annotation import interface
+- [x] Build TradingView connection setup
+- [x] Display sync status
+- [x] Build annotation import interface
 
 #### Testing
 - [x] Test factor compare endpoint exists
@@ -1098,12 +1098,12 @@
 - [x] Maintain audit trail
 
 #### Frontend Implementation
-- [ ] Build mapping review queue
-- [ ] Display source entity, suggested ticker, confidence
-- [ ] Show AI alternatives
-- [ ] Approve/reject/correct buttons
-- [ ] Bulk approve interface
-- [ ] Audit trail view
+- [x] Build mapping review queue
+- [x] Display source entity, suggested ticker, confidence
+- [x] Show AI alternatives
+- [x] Approve/reject/correct buttons
+- [x] Bulk approve interface
+- [x] Audit trail view
 
 #### Testing
 - [x] Test mapping workflow
@@ -1125,10 +1125,10 @@
 - [x] Notify user on status change
 
 #### Frontend Implementation
-- [ ] Build unmapped entities list
-- [ ] Build suggestion submission form
-- [ ] Show suggestion status tracking
-- [ ] Display notifications on status change
+- [x] Build unmapped entities list
+- [x] Build suggestion submission form
+- [x] Show suggestion status tracking
+- [x] Display notifications on status change
 
 #### Testing
 - [x] Test suggestion endpoint
@@ -1151,12 +1151,12 @@
 - [x] Support export of unmapped list
 
 #### Frontend Implementation
-- [ ] Build coverage dashboard
-- [ ] Display % mapped by source (bar chart)
-- [ ] Show unmapped $ value
-- [ ] Build prioritized unmapped list
-- [ ] Build coverage trend chart
-- [ ] Export button
+- [x] Build coverage dashboard
+- [x] Display % mapped by source (bar chart)
+- [x] Show unmapped $ value
+- [x] Build prioritized unmapped list
+- [x] Build coverage trend chart
+- [x] Export button
 
 #### Testing
 - [x] Test coverage endpoint
@@ -1179,11 +1179,11 @@
 - [x] Maintain audit trail
 
 #### Frontend Implementation
-- [ ] Build corporate action alerts
-- [ ] Show affected mappings
-- [ ] Preview adjustment impact
-- [ ] Approve/reject interface
-- [ ] Audit trail view
+- [x] Build corporate action alerts
+- [x] Show affected mappings
+- [x] Preview adjustment impact
+- [x] Approve/reject interface
+- [x] Audit trail view
 
 #### Testing
 - [x] Test corporate action detection
@@ -1213,10 +1213,10 @@
 - [x] Compare to historical similar events
 
 #### Frontend Implementation
-- [ ] Build loss estimate panel (triggered by qualifying event)
-- [ ] Display breakdown by insurer
-- [ ] Show confidence intervals
-- [ ] Historical comparison chart
+- [x] Build loss estimate panel (triggered by qualifying event)
+- [x] Display breakdown by insurer
+- [x] Show confidence intervals
+- [x] Historical comparison chart
 
 #### Testing
 - [x] Test earthquake detail endpoint
@@ -1241,12 +1241,12 @@
 - [x] Map predictions to studio tickers
 
 #### Frontend Implementation
-- [ ] Build forecast panel after Thursday preview release
-- [ ] Display ensemble predictions
-- [ ] Show confidence intervals
-- [ ] Compare to guidance
-- [ ] Show model accuracy history
-- [ ] Link to affected tickers
+- [x] Build forecast panel after Thursday preview release
+- [x] Display ensemble predictions
+- [x] Show confidence intervals
+- [x] Compare to guidance
+- [x] Show model accuracy history
+- [x] Link to affected tickers
 
 #### Testing
 - [x] Test box office factor exists
@@ -1276,10 +1276,10 @@
 - [x] Notify user on status changes
 
 #### Frontend Implementation
-- [ ] Build request submission form (name, URL, description, use case)
-- [ ] Priority indicator
-- [ ] Status tracking view
-- [ ] Notification display
+- [x] Build request submission form (name, URL, description, use case)
+- [x] Priority indicator
+- [x] Status tracking view
+- [x] Notification display
 
 #### Testing
 - [x] Test request workflow
@@ -1302,13 +1302,13 @@
 - [x] Implement manual trigger endpoint
 
 #### Frontend Implementation
-- [ ] Build health dashboard
-- [ ] Display collector list with status indicators
-- [ ] Show last successful collection
-- [ ] Show freshness vs SLA
-- [ ] Alert on SLA breaches
-- [ ] Error log viewer
-- [ ] Manual trigger button
+- [x] Build health dashboard
+- [x] Display collector list with status indicators
+- [x] Show last successful collection
+- [x] Show freshness vs SLA
+- [x] Alert on SLA breaches
+- [x] Error log viewer
+- [x] Manual trigger button
 
 #### Testing
 - [x] Test health tracking
@@ -1331,10 +1331,10 @@
 - [x] Ensure factors from archived sources remain computable
 
 #### Frontend Implementation
-- [ ] Display archived label in catalog
-- [ ] Show deprecation reason and date
-- [ ] Suggest alternatives
-- [ ] Full data access via UI/API
+- [x] Display archived label in catalog
+- [x] Show deprecation reason and date
+- [x] Suggest alternatives
+- [x] Full data access via UI/API
 
 #### Testing
 - [x] Test archived data access
@@ -1362,12 +1362,12 @@
 - [x] Track historical usage
 
 #### Frontend Implementation
-- [ ] Build usage dashboard
-- [ ] Display requests used / limit (progress bar)
-- [ ] Display data volume consumed
-- [ ] List features in current tier
-- [ ] Warning banners at 80% and 95%
-- [ ] Historical usage chart
+- [x] Build usage dashboard
+- [x] Display requests used / limit (progress bar)
+- [x] Display data volume consumed
+- [x] List features in current tier
+- [x] Warning banners at 80% and 95%
+- [x] Historical usage chart
 
 #### Testing
 - [x] Test usage tracking accuracy
@@ -1388,11 +1388,11 @@
 - [x] Implement prorated billing calculation
 
 #### Frontend Implementation
-- [ ] Build tier comparison page
-- [ ] Display clear pricing
-- [ ] One-click upgrade button
-- [ ] Confirmation with prorated amount
-- [ ] Success confirmation with new features
+- [x] Build tier comparison page
+- [x] Display clear pricing
+- [x] One-click upgrade button
+- [x] Confirmation with prorated amount
+- [x] Success confirmation with new features
 
 #### Testing
 - [x] Test upgrade flow
