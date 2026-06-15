@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Node
+node_modules/
+
+# Local data and state
+*.db
+*.sqlite
+*.pid
+daemon-state.json
+.playwright-mcp/
+
+# Tooling
+.claude/
+.claude-flow/
+.mcp.json
+
+# OS
+.DS_Store
