@@ -24,10 +24,5 @@ node_modules/
 daemon-state.json
 .playwright-mcp/
 
-# Tooling
-.claude/
-.claude-flow/
-.mcp.json
-
 # OS
 .DS_Store
